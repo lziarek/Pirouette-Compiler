@@ -4,40 +4,43 @@
 
 module Main where
 
-import Choreography
+import Choreography (runChoreography)
+import Choreography.Choreo
+import Choreography.Location
+import Choreography.Network.Local
 import Control.Monad
+import Control.Concurrent
+import Control.Concurrent.Async (async, mapConcurrently_, wait)
 import Data.Proxy
 import System.Environment
 
 -- Step 1: Defining locations
 
-agc :: Proxy "AGC"
+agc :: Proxy "agc"
 agc = Proxy
 
-lpf :: Proxy "LPF"
+lpf :: Proxy "lpf"
 lpf = Proxy
 
 
 -- Step 2: Writing a choreography
-agcLpf :: Float @ "AGC" -> Float @ "AGC" -> Choreo IO (exitValue @ "LPF")  
+agcLpf :: Float @ "agc" -> Float @ "agc" -> Choreo IO (Float @ "lpf")  
 agcLpf k1 k2 = do
+     --wait 40000
      val1 <- (agc, k1) ~> lpf
-     threadDelay 40000
+     --wait 40000
      val2 <- (agc, k2) ~> lpf
-     exitValue <- lpf `locally` (\x y -> return ((x + y) / 2)) val1 val2
-     threadDelay 40000
-     agcLpf
+     exitValue <- lpf `locally` \unwrap -> return $ (val1 + val2) / 2 
+     lpf `locally` \un -> return exitValue
 
 
 
 -- Step 3: Projecting and running the chreography
 main :: IO () --ask for input from user 
-main = do
-  args <- getArgs
-  case args of
-    [loc] -> void $ runChoreography cfg choreography loc
-    _     -> error "wrong usage: must provide exactly one location"
+main = do 
+  [k1, k2] <- map read <$> getArgs
+  config <- mkLocalConfig locs
+  mapConcurrently_ (runChoreography config (agcLpf k1 k2)) locs
+  return()
   where
-    -- Step 4: Mapping locations to HTTP ports
-    cfg = mkHttpConfig [ ("alice", ("localhost", 4242))
-                       ]
+    locs = ["agc", "lpf"]
