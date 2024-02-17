@@ -28,7 +28,7 @@ answer = "2"
 key_present :: Bool
 key_present = False
 
-car_key :: Choreo IO (Maybe Bool @ "car")
+car_key :: Choreo IO ()
 --should be done in 100ms, if not restart main
 car_key = do
     cond (car, locked) \case
