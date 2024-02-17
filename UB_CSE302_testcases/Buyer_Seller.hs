@@ -20,17 +20,16 @@ seller = Proxy
 auctionItem :: String
 auctionItem = "Example Item"
 
-bid :: Int
-bid =  100
-
 highestBid :: Int
-highestBid =  0
+highestBid =   100
 
 auction :: Choreo IO (Maybe Int @ "buyer")
 auction = do
     -- The buyer proposes a bid. This is a local computation at the buyer's location, which is represented by the underscore (_) in the lambda function.
     -- The bid is returned as a located value at the buyer's location.
-    proposedBid <- buyer `locally`\_ -> return bid
+    proposedBid <- buyer `locally` \_ -> do
+        putStrLn "Please enter your bid amount:"
+        read <$> getLine
 
     proposedBid' <- (buyer, proposedBid) ~> seller
 
@@ -43,13 +42,13 @@ auction = do
         True  -> do
             newHighestBid <- (seller, proposedBid') ~> buyer
             -- At the buyer's location, a message is printed to inform them that their bid was accepted, and the new highest bid is returned.
-            buyer `locally`\un -> do
+            buyer `locally` \un -> do
                 putStrLn $ "Your bid of " ++ show (un newHighestBid) ++ " has been accepted."
                 return $ Just (un newHighestBid)
         -- If the seller's decision is false, the following actions occur:
         False ->
             -- At the buyer's location, a message is printed to inform them that their bid was rejected, and nothing is returned.
-            buyer `locally`\_ -> do
+            buyer `locally` \_ -> do
                 putStrLn "Your bid has been rejected."
                 return Nothing
 
@@ -59,6 +58,6 @@ main = do
     void $ runChoreography cfg auction loc
     where
         cfg = mkHttpConfig
-            [ ("buyer",     ("localhost",  4242))
-            , ("seller",    ("localhost",  4343))
+            [ ("buyer",     ("localhost",   4242))
+            , ("seller",    ("localhost",   4343))
             ]
