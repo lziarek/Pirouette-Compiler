@@ -1,4 +1,0 @@
-- arguments: [--cpp-define=HLINT, --cpp-ansi]
-
-- ignore: {name: Eta reduce}
-- ignore: {name: Use import/export shortcut}
