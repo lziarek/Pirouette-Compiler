@@ -16,14 +16,11 @@ car = Proxy
 key :: Proxy "key"
 key = Proxy
 
-locked :: Bool
-locked = True
+locked_func' :: Choreo IO (Bool @ "car")
+locked_func' = car `locally` \un -> return True
 
-challenge :: String
-challenge = "Solve the challenge: 1+1 = ?\n"
-
-answer :: String
-answer = "2"
+challenge' :: Choreo IO (String @ "car")
+challenge' = car `locally` \un -> return "Solve the challenge: 1+1 = ?\n"
 
 key_present :: Bool
 key_present = False
@@ -31,38 +28,45 @@ key_present = False
 car_key :: Choreo IO ()
 --should be done in 100ms, if not restart main
 car_key = do
+    locked <- locked_func'
     cond (car, locked) \case
         True -> do
             --car locked, try to send wake signal to key
             --get info if key present
-            wake_msg <- (car, "myKEY") ~> key
-            cond (key, wake_msg == "myKEY") \case
+            -- (\_ do : warp)
+            -- (\un do : unwarp)
+            key_receive_wake <- (car, \_ -> do return "myKey") ~~> key
+            match <- key `locally` \un -> do return $ (un key_receive_wake) == "myKey"
+            cond (key, match) \case
                 True -> do
                     --key send out present signal
-                    key_present <- (key, True) ~~> car
-                    key `locally` \un -> do
-                        putStrLn "Car present"
+                    key_present <- (key, \_ -> do return True) ~~> car
+                    key `locally` \un -> do putStrLn "Car present"
                 False -> do
                     --key not present, rec main
-                    car_key()
+                    --how to get start from the beginning?
+                return car_key()
 
             --check if key near the car
-            cond (car, key_present) \case
+            if_present <- car `locally` \un -> return key_present
+            cond (car, if_present) \case
                 True -> do
                 --key send present signal
                 --start encode & decode
                 --(~~>) is variant of (~>) that allows to send the result of a local computation
-                    encoded_challenge <- (car, challenge) ~> key
-                    key_challenge <- (key, \_ -> do
-                                putStrLn encoded_challenge
+                    encoded_challenge <- (car, \_ -> do return challenge') ~~> key
+                    key_receive_challenge <- key `locally` \un -> do return $ encoded_challenge
+                    key_answer <- (key, \_ -> do
+                                putStrLn $ show (key_receive_challenge)
                                 getLine
                             )
                             ~~> car
                     
-                    cond (car, key_challenge == answer) \case
+                    match <- car `locally` \un -> return $ (un key_answer) == "2"
+                    cond (car, match) \case
                         True -> do
                             --matched, unlock the car
-                            let locked = False
+                            locked <- car `locally` \un -> return False
                             car_key()
                         False -> do
                             --not matched, rec main
@@ -81,26 +85,27 @@ car_key = do
                             getLine
                         )
                         ~~> car
-                cond(car, lock_signal == "LOCK") \case
+                match <- car `locally` \un -> return $ (un lock_signal) == "LOCK"
+                cond(car, match) \case
                     True -> do
                         --key still there
-                        let locked = True
+                        locked <- car `locally` \un -> return True
                         car_key()
                     False -> do
                         --key not present
-                        let locked = False
+                        locked <- car `locally` \un -> return False
                         car_key()
 
 timeoutFunc :: IO ()
 timeoutFunc = forever $ do
-    let result = timeout (10000000) car_key() 
+    let result = timeout (5000000) car_key() 
     case result of
         Nothing -> do
             putStrLn "Timeout"
-            timeoutFunc()
+            return timeoutFunc()
         Just _ -> do
             putStrLn "Incorrect/Car unlocked"
-            timeoutFunc()
+            return timeoutFunc()
 
 main :: IO ()
 main = do
