@@ -9,6 +9,7 @@ import           Control.Monad
 import           Control.Concurrent
 import           Data.Proxy
 import           System.Environment --(getArgs)
+import           System.Timeout
 
 car :: Proxy "car"
 car = Proxy
@@ -42,10 +43,7 @@ car_key = do
                     --key send out present signal
                     key_present <- (key, \_ -> do return True) ~~> car
                     key `locally` \un -> do putStrLn "Car present"
-                False -> do
-                    --key not present, rec main
-                    --how to get start from the beginning?
-                return car_key()
+                False -> return car_key() --key not present, car key both rec main
 
             --check if key near the car
             if_present <- car `locally` \un -> return key_present
@@ -67,15 +65,10 @@ car_key = do
                         True -> do
                             --matched, unlock the car
                             locked <- car `locally` \un -> return False
-                            car_key()
-                        False -> do
-                            --not matched, rec main
-                            car_key()
-                    
-                False -> do
-                    --not present, rec main
-                    car_key()
+                            return car_key()
+                        False -> return car_key() --not matched, rec main
 
+                False -> return car_key() --not present, rec main
 
         --car is unlock rn
         False -> do
@@ -90,31 +83,27 @@ car_key = do
                     True -> do
                         --key still there
                         locked <- car `locally` \un -> return True
-                        car_key()
+                        return car_key()
                     False -> do
                         --key not present
                         locked <- car `locally` \un -> return False
-                        car_key()
+                        return car_key()
 
-timeoutFunc :: IO ()
-timeoutFunc = forever $ do
-    let result = timeout (5000000) car_key() 
-    case result of
-        Nothing -> do
-            putStrLn "Timeout"
-            return timeoutFunc()
-        Just _ -> do
-            putStrLn "Incorrect/Car unlocked"
-            return timeoutFunc()
-
-main :: IO ()
-main = do
+infLoop :: IO ()
+infLoop = do
   [loc] <- getArgs
   case loc of
-        "buyer"  -> runChoreography cfg timeoutFunc "car"
-        "seller" -> runChoreography cfg timeoutFunc "key"
+        "car" -> runChoreography cfg car_key "car"
+        "key" -> runChoreography cfg car_key "key"
     return ()
     where
-        cfg = mkHttpConfig [ ("buyer",  ("localhost", 4242))
-                            , ("seller", ("localhost", 4343))
+        cfg = mkHttpConfig [ ("car",  ("localhost", 4242))
+                            , ("key", ("localhost", 4343))
                             ]
+
+main :: IO ()
+main = forever $ do
+    result <- timeout 5000000 infLoop
+    case result of
+        Nothing -> putStrLn "Timeout"
+        Just _ -> putStrLn "Incorrect/Car unlocked"
