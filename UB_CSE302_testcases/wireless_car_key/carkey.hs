@@ -17,19 +17,11 @@ car = Proxy
 key :: Proxy "key"
 key = Proxy
 
-locked_func' :: Choreo IO (Bool @ "car")
-locked_func' = car `locally` \un -> return True
-
-challenge' :: Choreo IO (String @ "car")
-challenge' = car `locally` \un -> return "Solve the challenge: 1+1 = ?\n"
-
-key_present :: Bool
-key_present = False
-
-car_key :: Choreo IO ()
+carkey :: Choreo IO (Bool @ "car")
 --should be done in 100ms, if not restart main
-car_key = do
-    locked <- locked_func'
+carkey = do
+    locked <- car `locally` \un -> return True
+    key_present <- car `locally` \un -> return False
     cond (car, locked) \case
         True -> do
             --car locked, try to send wake signal to key
@@ -43,32 +35,40 @@ car_key = do
                     --key send out present signal
                     key_present <- (key, \_ -> do return True) ~~> car
                     key `locally` \un -> do putStrLn "Car present"
-                False -> return car_key() --key not present, car key both rec main
+                False -> do
+                    key_present <- (key, \_ -> do return False) ~~> car
+                    key `locally` \un -> do putStrLn "key unmatched"--key not present, car key both rec main
 
-            --check if key near the car
-            if_present <- car `locally` \un -> return key_present
-            cond (car, if_present) \case
+                --check if key near the car
+            cond (car, (key_present)) \case
                 True -> do
                 --key send present signal
                 --start encode & decode
                 --(~~>) is variant of (~>) that allows to send the result of a local computation
-                    encoded_challenge <- (car, \_ -> do return challenge') ~~> key
-                    key_receive_challenge <- key `locally` \un -> do return $ encoded_challenge
+                    car `locally` \un -> do putStrLn "Key present"
+                    encoded_challenge <- (car, \_ -> do return "Solve the challenge: 1+1 = ?\n") ~~> key
+                    key `locally` \un -> do putStrLn $ (un encoded_challenge)
                     key_answer <- (key, \_ -> do
-                                putStrLn $ show (key_receive_challenge)
-                                getLine
-                            )
-                            ~~> car
-                    
+                            putStrLn "Enter the answer: "
+                            getLine
+                        )
+                        ~~> car
+                        
                     match <- car `locally` \un -> return $ (un key_answer) == "2"
                     cond (car, match) \case
                         True -> do
                             --matched, unlock the car
                             locked <- car `locally` \un -> return False
-                            return car_key()
-                        False -> return car_key() --not matched, rec main
+                            return $ (locked)
+                        False -> do
+                            --key not present
+                            locked <- car `locally` \un -> return False
+                            return $ (locked)
 
-                False -> return car_key() --not present, rec main
+                False -> do
+                        --key not present
+                    locked <- car `locally` \un -> return False
+                    return $ (locked)
 
         --car is unlock rn
         False -> do
@@ -83,27 +83,27 @@ car_key = do
                     True -> do
                         --key still there
                         locked <- car `locally` \un -> return True
-                        return car_key()
+                        return $ locked
                     False -> do
                         --key not present
                         locked <- car `locally` \un -> return False
-                        return car_key()
+                        return $ (locked)
 
 infLoop :: IO ()
 infLoop = do
   [loc] <- getArgs
   case loc of
-        "car" -> runChoreography cfg car_key "car"
-        "key" -> runChoreography cfg car_key "key"
-    return ()
-    where
-        cfg = mkHttpConfig [ ("car",  ("localhost", 4242))
-                            , ("key", ("localhost", 4343))
-                            ]
+        "car" -> runChoreography cfg carkey "car"
+        "key" -> runChoreography cfg carkey "key"
+  return ()
+  where
+      cfg = mkHttpConfig [ ("car",  ("localhost", 4242))
+                         , ("key", ("localhost", 4343))
+                         ]
 
 main :: IO ()
 main = forever $ do
-    result <- timeout 5000000 infLoop
-    case result of
-        Nothing -> putStrLn "Timeout"
-        Just _ -> putStrLn "Incorrect/Car unlocked"
+   result <- timeout 5000000 infLoop
+   case result of
+       Nothing -> putStrLn "Timeout"
+       Just _ -> putStrLn "Incorrect/Car unlocked"
