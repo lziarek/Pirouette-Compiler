@@ -30,17 +30,10 @@ carkey = do
             -- (\un do : unwarp)
             key_receive_wake <- (car, \_ -> do return "myKey") ~~> key
             match <- key `locally` \un -> do return $ (un key_receive_wake) == "myKey"
-            cond (key, match) \case
-                True -> do
-                    --key send out present signal
-                    key_present <- (key, \_ -> do return True) ~~> car
-                    key `locally` \un -> do putStrLn "Car present"
-                False -> do
-                    key_present <- (key, \_ -> do return False) ~~> car
-                    key `locally` \un -> do putStrLn "key unmatched"--key not present, car key both rec main
+            key_present <- (key, \_ -> do return True) ~~> car
 
-                --check if key near the car
-            cond (car, (key_present)) \case
+            --check if key near the car
+            cond (car, key_present) \case
                 True -> do
                 --key send present signal
                 --start encode & decode
@@ -58,15 +51,18 @@ carkey = do
                     cond (car, match) \case
                         True -> do
                             --matched, unlock the car
+                            car `locally` \un -> do putStrLn "Unlock the car"
                             locked <- car `locally` \un -> return False
                             return $ (locked)
                         False -> do
                             --key not present
+                            car `locally` \un -> do putStrLn "Incorrect, lock the car"
                             locked <- car `locally` \un -> return False
                             return $ (locked)
 
                 False -> do
                         --key not present
+                    car `locally` \un -> do putStrLn "Key not present"
                     locked <- car `locally` \un -> return False
                     return $ (locked)
 
@@ -89,8 +85,29 @@ carkey = do
                         locked <- car `locally` \un -> return False
                         return $ (locked)
 
-infLoop :: IO ()
-infLoop = do
+-- HasChor do not have API to close http
+-- infLoop :: IO ()
+-- infLoop = do
+--   [loc] <- getArgs
+--   case loc of
+--         "car" -> runChoreography cfg carkey "car"
+--         "key" -> runChoreography cfg carkey "key"
+--   return ()
+--   where
+--       cfg = mkHttpConfig [ ("car",  ("localhost", 4242))
+--                          , ("key", ("localhost", 4343))
+--                          ]
+
+-- main :: IO ()
+-- main = forever $ do
+--    result <- timeout 5000000 infLoop
+--    case result of
+--        Nothing -> putStrLn "Timeout"
+--        Just _ -> putStrLn "Incorrect/Car unlocked"
+-- END
+
+main :: IO ()
+main = do
   [loc] <- getArgs
   case loc of
         "car" -> runChoreography cfg carkey "car"
@@ -100,10 +117,3 @@ infLoop = do
       cfg = mkHttpConfig [ ("car",  ("localhost", 4242))
                          , ("key", ("localhost", 4343))
                          ]
-
-main :: IO ()
-main = forever $ do
-   result <- timeout 5000000 infLoop
-   case result of
-       Nothing -> putStrLn "Timeout"
-       Just _ -> putStrLn "Incorrect/Car unlocked"
