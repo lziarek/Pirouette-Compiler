@@ -48,6 +48,6 @@ main = do
   where
     cfg =
       mkHttpConfig
-        [ ("ping", ("localhost", 4242)),
-          ("pong", ("localhost", 4343))
+        [ ("ping", ("localhost", 8080)),
+          ("pong", ("localhost", 8081))
         ]
