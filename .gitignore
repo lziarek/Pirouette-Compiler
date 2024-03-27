@@ -1,1 +1,4 @@
 _build/*
+*.hi
+testing/.DS_Store
+testing/build
