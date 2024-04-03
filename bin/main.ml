@@ -47,10 +47,33 @@ and pp_local_typ fmt (loc_typ) =
 and pp_choreo_expr fmt (expr) =
     match expr with
     | Unit -> fprintf fmt "()"
-    | LocExpr (LocId id, le) -> fprintf fmt "%s .@ %a" id pp_local_expr le
-    (*not for local AST, need to be modified if use*)
     | Var (VarId id) -> fprintf fmt "%s" id
-    | _ -> fprintf fmt "Not implemented"
+    | LocExpr (LocId id, le) -> fprintf fmt "%s.@[%a@]" id pp_local_expr le
+    | Send (expr, LocId loc_id) -> fprintf fmt "%a ~> %s" pp_choreo_expr expr loc_id
+    | Sync (LocId loc_id1, LabelId label, LocId loc_id2, expr) ->
+        fprintf fmt "%s[%s] ~> %s;@ %a" loc_id1 label loc_id2 pp_choreo_expr expr
+    | If (cond, then_expr, else_expr) ->
+        fprintf fmt "if %a then %a else %a" pp_choreo_expr cond pp_choreo_expr then_expr pp_choreo_expr else_expr
+    | Let (decl_block, expr) ->  (* Adjusted to include decl_block *)
+        fprintf fmt "let ";
+        List.iter (fun stmt -> pp_stmt fmt stmt; fprintf fmt " ") decl_block;
+        fprintf fmt "in %a" pp_choreo_expr expr
+    | FunDef (VarId var_id, expr) ->
+        fprintf fmt "fun %s -> %a" var_id pp_choreo_expr expr
+    | FunApp (f, arg) ->
+        fprintf fmt "%a %a" pp_choreo_expr f pp_choreo_expr arg
+    | Pair (e1, e2) ->
+        fprintf fmt "(%a, %a)" pp_choreo_expr e1 pp_choreo_expr e2
+    | Fst e ->
+        fprintf fmt "fst %a" pp_choreo_expr e
+    | Snd e ->
+        fprintf fmt "snd %a" pp_choreo_expr e
+    | Left e ->
+        fprintf fmt "left %a" pp_choreo_expr e
+    | Right e ->
+        fprintf fmt "right %a" pp_choreo_expr e
+    | Match (e, _) ->  (* Adjusted to ignore cases *)
+        fprintf fmt "match %a with ... " pp_choreo_expr e  (* Simplified for brevity *)
 
 and pp_local_expr fmt (loc_expr) =
     match loc_expr with
