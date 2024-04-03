@@ -2,7 +2,9 @@
 open Parsing.Interface
 open Format
 
-let rec pp_ast fmt (Ast.Choreo.Prog stmts) = List.iter (pp_stmt fmt) stmts
+let rec pp_ast fmt (Ast.Choreo.Prog stmts) = 
+  List.iter (pp_stmt fmt) stmts;
+  Format.pp_print_newline Format.std_formatter ()
 
 and pp_stmt fmt statement =
   match statement with
@@ -144,6 +146,5 @@ let () =
     let lexbuf = Lexing.from_channel file_ic in
     let program = parse_program lexbuf in
     (*print_endline (dump_choreo_ast program)*)
-    pp_ast Format.std_formatter program;
-    Format.pp_print_flush Format.std_formatter ();
+      pp_ast Format.std_formatter program;
     close_in file_ic
