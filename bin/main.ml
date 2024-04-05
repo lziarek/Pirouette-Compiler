@@ -13,13 +13,13 @@ and pp_stmt fmt statement =
   | Assign (patn, expr) ->
       fprintf fmt "%a := @ %a;" pp_pattern patn pp_choreo_expr expr
   | TypeDecl (VarId id, typ) ->
-      fprintf fmt "type@ `%s := @ %a;" id pp_choreo_typ typ
+      fprintf fmt "type@ %s := @ %a;" id pp_choreo_typ typ
 
 and pp_pattern fmt patn =
   match patn with
   | Default -> fprintf fmt "Default"
   | LocPatt (LocId loc, lp) -> fprintf fmt "%s.%a" loc pp_local_pattern lp
-  | Var (VarId id) -> fprintf fmt "Var@ `%s" id
+  | Var (VarId id) -> fprintf fmt "Var@ %s" id
   | Left patn -> fprintf fmt "left@ %a" pp_pattern patn
   | Right patn -> fprintf fmt "right@ %a" pp_pattern patn
   | Pair (patn1, patn2) ->
