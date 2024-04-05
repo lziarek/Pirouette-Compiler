@@ -2,7 +2,7 @@ open Format
 
 let rec pp_ast fmt (Ast.Choreo.Prog stmts) = 
   List.iter (pp_stmt fmt) stmts;
-  Format.pp_print_newline Format.std_formatter ()
+  pp_print_newline fmt ()
 
 and pp_stmt fmt statement =
   match statement with
