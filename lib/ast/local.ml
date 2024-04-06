@@ -49,3 +49,97 @@ type local_expr =
   | Left of local_expr
   | Right of local_expr
   | Match of local_expr * (local_pattern * local_expr) list
+
+let rec dot_local_expr loc_expr =
+  match loc_expr with
+  | Unit -> print_endline "Unit"
+  | Val ((`Int _ | `String _ | `Bool _) as v) ->
+      print_endline (string_of_value v)
+  | Var (VarId id) -> print_endline id
+  | BinOp (e1, op, e2) ->
+      dot_local_expr e1;
+      dot_bin_op op;
+      dot_local_expr e2
+  | Let (VarId id, e1, e2) ->
+      print_endline ("Let: " ^ id);
+      dot_local_expr e1;
+      dot_local_expr e2
+  | Pair (e1, e2) ->
+      print_endline "Pair";
+      dot_local_expr e1;
+      dot_local_expr e2
+  | Fst e ->
+      print_endline "Fst";
+      dot_local_expr e
+  | Snd e ->
+      print_endline "Snd";
+      dot_local_expr e
+  | Left e ->
+      print_endline "Left";
+      dot_local_expr e
+  | Right e ->
+      print_endline "Right";
+      dot_local_expr e
+  | Match (e, cases) ->
+      print_endline "Match";
+      dot_local_expr e;
+      dot_local_cases cases
+
+and dot_local_pattern patn =
+  match patn with
+  | Default -> print_endline "Default"
+  | Val v -> print_endline (string_of_value v)
+  | Var (VarId id) -> print_endline id
+  | Pair (patn1, patn2) ->
+      print_endline "Pair";
+      dot_local_pattern patn1;
+      dot_local_pattern patn2
+  | Left patn ->
+      print_endline "Left";
+      dot_local_pattern patn
+  | Right patn ->
+      print_endline "Right";
+      dot_local_pattern patn
+
+and dot_local_type typ =
+  match typ with
+  | TUnit -> print_endline "Unit"
+  | TInt -> print_endline "Int"
+  | TString -> print_endline "String"
+  | TBool -> print_endline "Bool"
+  | TProd (typ1, typ2) ->
+      print_endline "Product";
+      dot_local_type typ1;
+      dot_local_type typ2
+  | TSum (typ1, typ2) ->
+      print_endline "Sum";
+      dot_local_type typ1;
+      dot_local_type typ2
+
+and dot_bin_op op =
+  match op with
+  | Plus -> print_endline "+"
+  | Minus -> print_endline "-"
+  | Times -> print_endline "*"
+  | Div -> print_endline "/"
+  | And -> print_endline "&&"
+  | Or -> print_endline "||"
+  | Eq -> print_endline "="
+  | Neq -> print_endline "!="
+  | Lt -> print_endline "<"
+  | Leq -> print_endline "<="
+  | Gt -> print_endline ">"
+  | Geq -> print_endline ">="
+
+and string_of_value v =
+  match v with
+  | `Int i -> string_of_int i
+  | `String s -> s
+  | `Bool b -> string_of_bool b
+
+and dot_local_cases cases = List.iter dot_local_case cases
+
+and dot_local_case (patn, expr) = 
+  print_endline "Case"
+  dot_local_pattern patn;
+  dot_local_expr expr
