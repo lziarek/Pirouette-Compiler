@@ -1,23 +1,44 @@
 open Format
-(*Vincent Chan 04/06/2024*)
-(*A pretty print library to print Pirouette code in format by using Format library*)
-(*Format.formatter fmt: 
+(*
+  A pretty print library to print Pirouette code in format using
+  the Format module in OCaml: https://v2.ocaml.org/api/Format.html
+
+  Format.formatter fmt: 
   print code to:
   - standard output Stdlib.stdout: Format.std_formatter
   - standard error Stdlib.stderr: Format.err_formatter
   - string {use stdbuffer in Format lib}: Format.str_formatter & Format.flush_str_formatter
-  - file: Format.formatter_of_out_channel (open_out "file_name")*)
+  - file: Format.formatter_of_out_channel (open_out "file_name")
+*)
 
+
+(*
+  pp_ast:
+  Input: 
+    - Format.formatter fmt
+    - Ast.Choreo.Prog stmts: Choreo AST
+
+  Print the list of statements in the format and a new line when finish
+*)
 let rec pp_ast fmt (Ast.Choreo.Prog stmts) = 
   pp_stmts fmt stmts;
   pp_print_newline fmt ()
 
+(*
+  pp_stmts:
+  Input: 
+    - Format.formatter fmt
+    - Ast.Choreo.decl_block stmts: a list of statements
+
+  use pattern matching to print each statement in the list
+  if the list is empty, do nothing
+  else print the first statement and call pp_stmts recursively on the rest of the list
+*)
 and pp_stmts fmt stmts = 
   match stmts with
   | [] -> ()
   | stmt :: stmts -> 
     pp_stmt fmt stmt;
-    pp_print_newline fmt ();
     pp_stmts fmt stmts
 
 and pp_stmt fmt statement =
@@ -33,7 +54,7 @@ and pp_pattern fmt patn =
   match patn with
   | Default -> fprintf fmt "Default"
   | LocPatt (LocId loc, lp) -> fprintf fmt "%s.%a" loc pp_local_pattern lp
-  | Var (VarId id) -> fprintf fmt "Var %s" id
+  | Var (VarId id) -> fprintf fmt "%s" id
   | Left patn -> fprintf fmt "left %a" pp_pattern patn
   | Right patn -> fprintf fmt "right %a" pp_pattern patn
   | Pair (patn1, patn2) ->
@@ -101,7 +122,6 @@ and pp_choreo_cases fmt case_list =
   | [] -> ()
   | case :: cases -> 
     pp_choreo_case fmt case;
-    pp_print_newline fmt ();
     pp_choreo_cases fmt cases
 
 and pp_choreo_case fmt (patn, expr) =
@@ -131,7 +151,6 @@ and pp_local_cases fmt case_list =
   | [] -> ()
   | case :: cases -> 
     pp_local_case fmt case;
-    pp_print_newline fmt ();
     pp_local_cases fmt cases
 
 and pp_local_case fmt (patn, expr) =
