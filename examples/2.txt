@@ -1,1 +1,1 @@
-y := fst(P1.\"Hello\", P1.\"World\");
+y := fst(P1."Hello", P1."World");

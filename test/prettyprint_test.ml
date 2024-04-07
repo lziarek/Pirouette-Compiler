@@ -15,10 +15,9 @@ let decl_expr _ = peq "(P1.5, P2.true) : P1.int * P2.bool;"
 let pair_assign _ = peq "pair1 := (P1.5, P2.true);"
 let binary_operation _ =
   peq "y := if P1.(3 > 5 && 4 < 0) then P1.3 else P1.6;"
-let test_first_pair _ = peq " y := fst(P1.\"Hello\", P1.\"World\");"
-let test_second_pair _ = peq " y := snd(P1.\"Hello\", P1.\"World\");"
+let test_first_pair _ = peq " y := fst(P1.1, P1.2);"
+let test_second_pair _ = peq " y := snd(P1.1, P1.2);"
 let test_decl_send _ = peq "y : P2.int;\n        y := P1.5 ~> P2;"
-
 
 let suite =
   "Pretty print Tests"
