@@ -1,0 +1,38 @@
+digraph G {
+    fontname = "Arial";
+    labelloc = t;
+    label = ":def plus (lambda ((x : int) : (-> int int)) (lambda ((y : int) : int) (+ x y)))";
+    node [fontname = "Arial"; style = filled;];
+    edge [arrowhead = vee;];
+    n002 [label = "Def";color = aquamarine3;];
+    n002 -> n003;
+    n003 [label = "Plus";];
+    n002 -> n004;
+    n004 [label = "Func";color = aquamarine3;];
+    n004 -> n005;
+    n005 [label = "X";];
+    n004 -> n006;
+    n006 [label = "Func (inner)";color = aquamarine3;];
+    n006 -> n007;
+    n007 [label = "Y";];
+    n006 -> n008;
+    n008 [label = "Int";];
+    n006 -> n009;
+    n009 [label = "Int";];
+    n006 -> n010;
+    n010 [label = "Binop";color = aquamarine3;];
+    n010 -> n011;
+    n011 [label = "Plus";];
+    n010 -> n012;
+    n012 [label = "Lit(x)";];
+    n010 -> n013;
+    n013 [label = "Lit(y)";];
+    n004 -> n014;
+    n014 [label = "Int";];
+    n004 -> n015;
+    n015 [label = "Arrow";color = aquamarine3;];
+    n015 -> n016;
+    n016 [label = "Int";];
+    n015 -> n017;
+    n017 [label = "Int";];
+}

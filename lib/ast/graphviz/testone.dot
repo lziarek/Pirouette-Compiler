@@ -1,0 +1,10 @@
+digraph G {
+    beautify = true;
+    layout = sfdp;
+    _background = "c 7 -#ff0000 p 4 4 4 36 4 36 36 4 36";
+    node [shape = square; style = filled; color = yellow;];
+    edge [style = dotted; color = red;];
+    A [color = red;];
+    B [color = blueviolet;];
+    {A B C} -> {D E F};
+}
