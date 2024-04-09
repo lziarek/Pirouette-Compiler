@@ -39,6 +39,7 @@ and pp_stmts fmt stmts =
   | [] -> ()
   | stmt :: stmts -> 
     pp_stmt fmt stmt;
+    if stmts <> [] then fprintf fmt "@,";
     pp_stmts fmt stmts
 
 and pp_stmt fmt statement =
@@ -46,7 +47,7 @@ and pp_stmt fmt statement =
   | Decl (patn, typ) ->
       fprintf fmt "%a : %a;" pp_pattern patn pp_choreo_typ typ
   | Assign (patn, expr) ->
-      fprintf fmt "%a := %a;" pp_pattern patn pp_choreo_expr expr
+    fprintf fmt "%a :=@;<1 2>%a;" pp_pattern patn pp_choreo_expr expr
   | TypeDecl (VarId id, typ) ->
       fprintf fmt "type %s := %a;" id pp_choreo_typ typ
 
@@ -98,16 +99,15 @@ and pp_choreo_expr fmt expr =
   | Var (VarId id) -> fprintf fmt "%s" id
   | LocExpr (LocId id, le) -> fprintf fmt "%s.(%a)" id pp_local_expr le
   | Send (expr, LocId loc_id) ->
-      fprintf fmt "%a ~> %s" pp_choreo_expr expr loc_id
+    fprintf fmt "%a ~> %s" pp_choreo_expr expr loc_id
   | Sync (LocId loc_id1, LabelId label, LocId loc_id2, expr) ->
-      fprintf fmt "%s[%s] ~> %s; %a" loc_id1 label loc_id2 pp_choreo_expr expr
+    fprintf fmt "%s[%s] ~> %s; %a" loc_id1 label loc_id2 pp_choreo_expr expr
   | If (cond, then_expr, else_expr) ->
-      fprintf fmt "if %a then %a@ else %a" pp_choreo_expr cond pp_choreo_expr
-        then_expr pp_choreo_expr else_expr
+    fprintf fmt "@[<v>if %a then@,@[<v 2>%a@]@,else@,@[<v 2>%a@]@]" pp_choreo_expr cond pp_choreo_expr then_expr pp_choreo_expr else_expr
   | Let (decl_block, expr) ->
-      fprintf fmt "let %a in %a" pp_stmts decl_block pp_choreo_expr expr
+    fprintf fmt "@[<hov 2>let %a in@]@,@;<0 2>@[<2>%a@]" pp_stmts decl_block pp_choreo_expr expr
   | FunDef (VarId var_id, expr) ->
-      fprintf fmt "fun %s -> %a" var_id pp_choreo_expr expr
+    fprintf fmt "fun %s -> %a" var_id pp_choreo_expr expr
   | FunApp (f, arg) -> fprintf fmt "%a %a" pp_choreo_expr f pp_choreo_expr arg
   | Pair (e1, e2) -> fprintf fmt "(%a, %a)" pp_choreo_expr e1 pp_choreo_expr e2
   | Fst e -> fprintf fmt "fst %a" pp_choreo_expr e
