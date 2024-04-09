@@ -103,7 +103,7 @@ and pp_choreo_expr fmt expr =
   | Sync (LocId loc_id1, LabelId label, LocId loc_id2, expr) ->
     fprintf fmt "%s[%s] ~> %s; %a" loc_id1 label loc_id2 pp_choreo_expr expr
   | If (cond, then_expr, else_expr) ->
-    fprintf fmt "@[<v>if %a then@,@[<v 2>%a@]@,else@,@[<v 2>%a@]@]" pp_choreo_expr cond pp_choreo_expr then_expr pp_choreo_expr else_expr
+    fprintf fmt "@[<v>if %a then@;<1 2>%a@,@[<v 2>else@;%a@]@]" pp_choreo_expr cond pp_choreo_expr then_expr pp_choreo_expr else_expr
   | Let (decl_block, expr) ->
     fprintf fmt "@[<hov 2>let %a in@]@,@;<0 2>@[<2>%a@]" pp_stmts decl_block pp_choreo_expr expr
   | FunDef (VarId var_id, expr) ->
