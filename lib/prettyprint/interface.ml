@@ -105,7 +105,7 @@ and pp_choreo_expr fmt expr =
   | If (cond, then_expr, else_expr) ->
     fprintf fmt "@[<v>if %a then@;<1 2>%a@,@[<v 2>else@;%a@]@]" pp_choreo_expr cond pp_choreo_expr then_expr pp_choreo_expr else_expr
   | Let (decl_block, expr) ->
-    fprintf fmt "@[<hov 2>let %a in@]@,@;<0 2>@[<2>%a@]" pp_stmts decl_block pp_choreo_expr expr
+    fprintf fmt "@[<hov 2>let %a in@]@;<0 2>@[<2>%a@]" pp_stmts decl_block pp_choreo_expr expr
   | FunDef (VarId var_id, expr) ->
     fprintf fmt "fun %s -> %a" var_id pp_choreo_expr expr
   | FunApp (f, arg) -> fprintf fmt "%a %a" pp_choreo_expr f pp_choreo_expr arg
@@ -115,7 +115,7 @@ and pp_choreo_expr fmt expr =
   | Left e -> fprintf fmt "left %a" pp_choreo_expr e
   | Right e -> fprintf fmt "right %a" pp_choreo_expr e
   | Match (e, cases) ->
-      fprintf fmt "match %a with@ %a" pp_choreo_expr e pp_choreo_cases cases
+      fprintf fmt "@[<v>match %a with@;<1 2>%a@]" pp_choreo_expr e pp_choreo_cases cases
 
 and pp_choreo_cases fmt case_list = 
   match case_list with
@@ -125,7 +125,7 @@ and pp_choreo_cases fmt case_list =
     pp_choreo_cases fmt cases
 
 and pp_choreo_case fmt (patn, expr) =
-  fprintf fmt "| %a -> %a" pp_pattern patn pp_choreo_expr expr
+  fprintf fmt "| %a -> %a@" pp_pattern patn pp_choreo_expr expr
 
 and pp_local_expr fmt loc_expr =
   match loc_expr with
@@ -144,7 +144,7 @@ and pp_local_expr fmt loc_expr =
   | Let (VarId id, e1, e2) ->
       fprintf fmt "let %s := %a in@ %a" id pp_local_expr e1 pp_local_expr e2
   | Match (e, cases) ->
-      fprintf fmt "match %a with@ %a" pp_local_expr e pp_local_cases cases
+      fprintf fmt "@[<v>match %a with@;<1 2>%a@]" pp_local_expr e pp_local_cases cases
 
 and pp_local_cases fmt case_list = 
   match case_list with
@@ -154,7 +154,7 @@ and pp_local_cases fmt case_list =
     pp_local_cases fmt cases
 
 and pp_local_case fmt (patn, expr) =
-  fprintf fmt "| %a -> %a" pp_local_pattern patn pp_local_expr expr
+  fprintf fmt "| %a -> %a@" pp_local_pattern patn pp_local_expr expr
 
 and pp_bin_op fmt op =
   match op with
