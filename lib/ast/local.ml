@@ -1,3 +1,7 @@
+type filename = string
+type line = int
+type metainfo = filename * line (* define metainfo, filename, and line number *)
+
 type value =
   [ `Int of int
   | `String of string

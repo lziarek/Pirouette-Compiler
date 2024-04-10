@@ -20,7 +20,7 @@
 %token IF THEN ELSE
 %token FST SND LEFT RIGHT
 %token MATCH WITH
-%token EOF
+%token <string> EOF /* filename */
 
 %type <Ast.Choreo.program> program
 %type <Ast.Choreo.decl_block> decl_block
@@ -54,7 +54,7 @@
 %%
 
 program:
-  | decl_block EOF { Prog $1 }
+  | decl_block EOF { Prog ($1, $2) } /* filename at EOF*/
 
 decl_block:
   | list(statement) { $1 }

@@ -7,6 +7,9 @@
   let next_line lexbuf =
     let pos = lexbuf.lex_curr_p in
     lexbuf.lex_curr_p <- { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = lexbuf.lex_curr_pos }
+
+  let filename lexbuf = lexbuf.lex_curr_p.pos_fname
+
 }
 
 let digit = ['0'-'9']
@@ -70,7 +73,7 @@ rule read = parse
   | '"'                { read_string (Buffer.create 17) lexbuf }
   | newline            { next_line lexbuf; read lexbuf }
   | _                  { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
-  | eof                { EOF }
+  | eof                { EOF (filename lexbuf) }
 
 and read_string buf = parse
   | '"'       { STRING (Buffer.contents buf) }
@@ -97,7 +100,7 @@ and read_string buf = parse
 and read_single_line_comment = parse
   | newline { next_line lexbuf; read lexbuf }
   | _       { read_single_line_comment lexbuf }
-  | eof     { EOF }
+  | eof     { EOF (filename lexbuf) }
 
 and read_multi_line_comment = parse
   | "-}"    { read lexbuf }

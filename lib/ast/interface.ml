@@ -3,8 +3,8 @@ open Yojson.Basic
 
 let rec dump_choreo_ast prog = dump_program prog |> pretty_to_string
 
-and dump_program (Prog stmts) =
-  `Assoc [ ("decl_block", `List (List.map dump_stmt stmts)) ]
+and dump_program (Prog (stmts, filename)) =
+  `Assoc [ ("File", `String filename); ("decl_block", `List (List.map dump_stmt stmts)) ]
 
 and dump_stmt = function
   | Decl (p, t) ->

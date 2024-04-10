@@ -39,4 +39,4 @@ and statement =
 
 and decl_block = statement list
 
-type program = Prog of decl_block
+type program = Prog of decl_block * filename
