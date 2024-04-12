@@ -1,5 +1,6 @@
 type filename = string
 type line = int
+type range = line * line
 type metainfo = filename * line (* define metainfo, filename, and line number *)
 
 type value =
@@ -7,9 +8,9 @@ type value =
   | `String of string
   | `Bool of bool ]
 
-type loc_id = LocId of string
-type var_id = VarId of string
-type sync_label = LabelId of string
+type loc_id = LocId of string * metainfo
+type var_id = VarId of string * metainfo
+type sync_label = LabelId of string * metainfo
 
 type bin_op =
   | Plus

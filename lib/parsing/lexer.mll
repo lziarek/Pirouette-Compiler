@@ -9,6 +9,8 @@
     lexbuf.lex_curr_p <- { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = lexbuf.lex_curr_pos }
 
   let filename lexbuf = lexbuf.lex_curr_p.pos_fname
+  let line lexbuf = lexbuf.lex_curr_p.pos_lnum
+  let metainfo lexbuf= (filename lexbuf, line lexbuf)
 
 }
 
@@ -28,10 +30,10 @@ rule read = parse
   | ')'                { RPAREN }
   | '['                { LBRACKET }
   | ']'                { RBRACKET }
-  | ','                { COMMA }
-  | '.'                { DOT }
-  | ':'                { COLON }
-  | ';'                { SEMICOLON }
+  | ','                { COMMA (metainfo lexbuf) }
+  | '.'                { DOT (metainfo lexbuf) }
+  | ':'                { COLON (metainfo lexbuf) }
+  | ';'                { SEMICOLON (metainfo lexbuf) }
   | '+'                { PLUS }
   | '-'                { MINUS }
   | '*'                { TIMES }
@@ -69,11 +71,11 @@ rule read = parse
   | "left"             { LEFT }
   | "right"            { RIGHT }
   | integer as s       { INT (int_of_string s) }
-  | identifier as s    { ID (s) }
+  | identifier as s    { ID (s, metainfo lexbuf) }
   | '"'                { read_string (Buffer.create 17) lexbuf }
   | newline            { next_line lexbuf; read lexbuf }
   | _                  { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
-  | eof                { EOF (filename lexbuf) }
+  | eof                { EOF (metainfo lexbuf) }
 
 and read_string buf = parse
   | '"'       { STRING (Buffer.contents buf) }
@@ -100,7 +102,7 @@ and read_string buf = parse
 and read_single_line_comment = parse
   | newline { next_line lexbuf; read lexbuf }
   | _       { read_single_line_comment lexbuf }
-  | eof     { EOF (filename lexbuf) }
+  | eof     { EOF (metainfo lexbuf) }
 
 and read_multi_line_comment = parse
   | "-}"    { read lexbuf }

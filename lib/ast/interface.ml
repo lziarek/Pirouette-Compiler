@@ -3,36 +3,36 @@ open Yojson.Basic
 
 let rec dump_choreo_ast prog = dump_program prog |> pretty_to_string
 
-and dump_program (Prog (stmts, filename)) =
-  `Assoc [ ("File", `String filename); ("decl_block", `List (List.map dump_stmt stmts)) ]
+and dump_program (Prog (stmts, (filename, line))) =
+  `Assoc [ ("File", `String filename); ("Lines", `Int line); ("decl_block", `List (List.map dump_stmt stmts)) ]
 
 and dump_stmt = function
-  | Decl (p, t) ->
+  | Decl (p, t, (_, line)) ->
       `Assoc
         [
-          ( "Decl",
+          ( "Decl (Line: " ^ string_of_int line ^ ")", (* "-" ^ string_of_int eline ^ *) 
             `Assoc [ ("pattern", dump_pattern p); ("choreo_type", dump_choreo_type t) ]
           );
         ]
-  | Assign (p, e) ->
+  | Assign (p, e, (_, line)) ->
       `Assoc
         [
-          ( "Assign",
+          ( "Assign (Line: " ^ string_of_int line ^ ")",
             `Assoc [ ("pattern", dump_pattern p); ("choreo_expr", dump_choreo_expr e) ]
           );
         ]
-  | TypeDecl (VarId id, t) ->
+  | TypeDecl (VarId (id, (_, id_line)), t) ->
       `Assoc
         [
           ( "TypeDecl",
-            `Assoc [ ("id", `String id); ("choreo_type", dump_choreo_type t) ]
+            `Assoc [ ("id (Line: " ^ string_of_int id_line ^ ")", `String id); ("choreo_type", dump_choreo_type t) ]
           );
         ]
 
 and dump_choreo_expr = function
   | Unit -> `String "Unit"
-  | Var (VarId id) ->
-      `Assoc [ ("Var", `String id) ]
+  | Var (VarId (id, (_, id_line))) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
   | Fst e ->
       `Assoc [ ("Fst", dump_choreo_expr e) ]
   | Snd e ->
@@ -41,31 +41,31 @@ and dump_choreo_expr = function
       `Assoc [ ("Left", dump_choreo_expr e) ]
   | Right e ->
       `Assoc [ ("Right", dump_choreo_expr e) ]
-  | LocExpr (LocId loc, e) ->
+  | LocExpr (LocId (loc, (_, loc_line)), e) ->
       `Assoc
         [
           ( "LocExpr",
             `Assoc
-              [ ("loc", `String loc); ("local_expr", dump_local_expr e) ]
+              [ ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc); ("local_expr", dump_local_expr e) ]
           );
         ]
-  | Send (e, LocId loc) ->
+  | Send (e, LocId (loc, (_, loc_line))) ->
       `Assoc
         [
           ( "Send",
             `Assoc
-              [ ("choreo_expr", dump_choreo_expr e); ("loc", `String loc) ]
+              [ ("choreo_expr", dump_choreo_expr e); ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc) ]
           );
         ]
-  | Sync (LocId loc1, LabelId label, LocId loc2, e) ->
+  | Sync (LocId (loc1, (_, loc1_line)), LabelId (label, _), LocId (loc2, (_, loc2_line)), e) ->
       `Assoc
         [
           ( "Sync",
             `Assoc
               [
-                ("loc1", `String loc1);
+                ("loc1 (Line: " ^ string_of_int loc1_line ^ ")", `String loc1);
                 ("label", `String label);
-                ("loc2", `String loc2);
+                ("loc2 (Line: " ^ string_of_int loc2_line ^ ")", `String loc2);
                 ("choreo_expr", dump_choreo_expr e);
               ] );
         ]
@@ -90,11 +90,11 @@ and dump_choreo_expr = function
                 ("choreo_expr", dump_choreo_expr e);
               ] );
         ]
-  | FunDef (VarId id, e) ->
+  | FunDef (VarId (id, (_, id_line)), e) ->
       `Assoc
         [
           ( "FunDef",
-            `Assoc [ ("id", `String id); ("choreo_expr", dump_choreo_expr e) ]
+            `Assoc [ ("id (Line: " ^ string_of_int id_line ^ ")", `String id); ("choreo_expr", dump_choreo_expr e) ]
           );
         ]
   | FunApp (e1, e2) ->
@@ -121,8 +121,8 @@ and dump_local_expr = function
   | Unit -> `String "Unit"
   | Val (`Int _ | `String _ | `Bool _ as v) ->
       `Assoc [ ("Val", v) ]
-  | Var (VarId id) ->
-      `Assoc [ ("Var", `String id) ]
+  | Var (VarId (id, (_, id_line))) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
   | Fst e ->
       `Assoc [ ("Fst", dump_local_expr e) ]
   | Snd e ->
@@ -144,13 +144,13 @@ and dump_local_expr = function
                 ("choreo_e2", dump_local_expr e2);
               ] );
         ]
-  | Let (VarId id, e1, e2) ->
+  | Let (VarId (id, (_, id_line)), e1, e2) ->
       `Assoc
         [
           ( "Let",
             `Assoc
               [
-                ("id", `String id);
+                ("id (Line: " ^ string_of_int id_line ^ ")", `String id);
                 ("binding", dump_local_expr e1);
                 ("body", dump_local_expr e2);
               ] );
@@ -174,21 +174,21 @@ and dump_local_case (p, e) =
 
 and dump_pattern = function
   | Default -> `String "Default"
-  | Var (VarId id) ->
-      `Assoc [ ("Var", `String id) ]
+  | Var (VarId (id, (_, id_line))) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
   | Left p ->
       `Assoc [ ("Left", dump_pattern p) ]
   | Right p ->
       `Assoc [ ("Right", dump_pattern p) ]
   | Pair (p1, p2) ->
       `Assoc [ ("Pair", `List [ dump_pattern p1; dump_pattern p2 ]) ]
-  | LocPatt (LocId loc, p) ->
+  | LocPatt (LocId (loc, (_, loc_line)), p) ->
       `Assoc
         [
           ( "LocPatt",
             `Assoc
               [
-                ("loc", `String loc); ("local_patt", dump_local_pattern p);
+                ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc); ("local_patt", dump_local_pattern p);
               ] );
         ]
 
@@ -196,8 +196,8 @@ and dump_local_pattern = function
   | Default -> `String "Default"
   | Val (`Int _ | `String _ | `Bool _ as v)  ->
       `Assoc [ ("Val", v) ]
-  | Var (VarId id) ->
-      `Assoc [ ("Var", `String id) ]
+  | Var (VarId (id, (_, id_line))) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
   | Left p ->
       `Assoc [ ("Left", dump_local_pattern p) ]
   | Right p ->
@@ -208,12 +208,12 @@ and dump_local_pattern = function
 
 and dump_choreo_type = function
   | TUnit -> `String "TUnit"
-  | TLoc (LocId loc, t) ->
+  | TLoc (LocId (loc, (_, loc_line)), t) ->
       `Assoc
         [
           ( "TLoc",
             `Assoc
-              [ ("loc", `String loc); ("local_type", dump_local_type t) ]
+              [ ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc); ("local_type", dump_local_type t) ]
           );
         ]
   | TSend (t1, t2) ->

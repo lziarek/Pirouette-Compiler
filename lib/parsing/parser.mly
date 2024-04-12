@@ -3,7 +3,7 @@
   open Ast.Choreo
 %}
 
-%token <string> ID
+%token <string * (string * int)> ID
 %token <int>    INT
 %token <string> STRING
 %token TRUE FALSE
@@ -13,14 +13,14 @@
 %token AND OR
 %token EQ NEQ LT LEQ GT GEQ
 %token LPAREN RPAREN LBRACKET RBRACKET
-%token COMMA DOT COLON SEMICOLON
+%token <string * int> COMMA DOT COLON SEMICOLON
 %token VERTICAL UNDERSCORE
 %token COLONEQ ARROW TILDE_ARROW
 %token LET IN
 %token IF THEN ELSE
 %token FST SND LEFT RIGHT
 %token MATCH WITH
-%token <string> EOF /* filename */
+%token <string * int> EOF /* filename */
 
 %type <Ast.Choreo.program> program
 %type <Ast.Choreo.decl_block> decl_block
@@ -61,8 +61,8 @@ decl_block:
 
 /* TODO: Removing the need for semicolons */
 statement:
-  | pattern COLON choreo_type SEMICOLON        { Decl ($1, $3)}
-  | pattern COLONEQ choreo_expr SEMICOLON      { Assign ($1, $3) }
+  | pattern COLON choreo_type SEMICOLON        { Decl ($1, $3, $2) } // metainfo at $2
+  | pattern COLONEQ choreo_expr SEMICOLON      { Assign ($1, $3, $4) } // metainfo at $4
   | TYPE var_id COLONEQ choreo_type SEMICOLON? { TypeDecl ($2, $4) }
 
 /* Associativity increases from expr to expr3, with each precedence level falling through to the next. */
@@ -77,7 +77,7 @@ choreo_expr:
   | LPAREN choreo_expr COMMA choreo_expr RPAREN                                  { Pair ($2, $4) }
   | MATCH choreo_expr WITH nonempty_list(case)                                   { Match ($2, $4) }
   | loc_id LBRACKET sync_label RBRACKET TILDE_ARROW loc_id SEMICOLON choreo_expr { Sync ($1, $3, $6, $8) }
-  | choreo_expr1 TILDE_ARROW loc_id DOT var_id SEMICOLON choreo_expr             { Let ([Assign (LocPatt ($3, Var $5), Send ($1, $3))], $7) }
+  | choreo_expr1 TILDE_ARROW loc_id DOT var_id SEMICOLON choreo_expr             { Let ([Assign (LocPatt ($3, Var $5), Send ($1, $3), $6)], $7) } // metainfo at $6
   | choreo_expr1                                                                 { $1 }
 
 choreo_expr1:
@@ -144,13 +144,13 @@ local_type:
   | LPAREN local_type RPAREN    { $2 }
   
 loc_id:
-  | ID { LocId $1 }
+  | ID { let (id, metainfo) = $1 in LocId (id, metainfo) }
 
 var_id:
-  | ID { VarId $1 }
+  | ID { let (id, metainfo) = $1 in VarId (id, metainfo) }
 
 sync_label:
-  | ID { LabelId $1 }
+  | ID { let (id, metainfo) = $1 in LabelId (id, metainfo) }
 
 value:
   | INT    { `Int $1 }

@@ -33,10 +33,10 @@ type choreo_expr =
   | Match of choreo_expr * (pattern * choreo_expr) list
 
 and statement =
-  | Decl of pattern * choreo_type
-  | Assign of pattern * choreo_expr
+  | Decl of pattern * choreo_type * metainfo
+  | Assign of pattern * choreo_expr * metainfo
   | TypeDecl of var_id * choreo_type
 
 and decl_block = statement list
 
-type program = Prog of decl_block * filename
+type program = Prog of decl_block * metainfo
