@@ -34,18 +34,18 @@ rule read = parse
   | '.'                { DOT (metainfo lexbuf) }
   | ':'                { COLON (metainfo lexbuf) }
   | ';'                { SEMICOLON (metainfo lexbuf) }
-  | '+'                { PLUS }
-  | '-'                { MINUS }
-  | '*'                { TIMES }
-  | '/'                { DIV }
-  | "&&"               { AND }
-  | "||"               { OR }
-  | "="                { EQ }
-  | "!="               { NEQ }
-  | "<"                { LT }
-  | "<="               { LEQ }
-  | ">"                { GT }
-  | ">="               { GEQ }
+  | '+'                { PLUS (metainfo lexbuf) }
+  | '-'                { MINUS (metainfo lexbuf) }
+  | '*'                { TIMES (metainfo lexbuf) }
+  | '/'                { DIV (metainfo lexbuf) }
+  | "&&"               { AND (metainfo lexbuf) }
+  | "||"               { OR (metainfo lexbuf) }
+  | "="                { EQ (metainfo lexbuf) }
+  | "!="               { NEQ (metainfo lexbuf) }
+  | "<"                { LT (metainfo lexbuf) }
+  | "<="               { LEQ (metainfo lexbuf) }
+  | ">"                { GT (metainfo lexbuf) }
+  | ">="               { GEQ (metainfo lexbuf) }
   | '|'                { VERTICAL }
   | '_'                { UNDERSCORE }
   | ":="               { COLONEQ }

@@ -234,15 +234,15 @@ and dump_local_type = function
       `Assoc [ ("TSum", `List [ dump_local_type t1; dump_local_type t2 ]) ]
 
 and dump_bin_op = function
-  | Plus -> `String "Plus"
-  | Minus -> `String "Minus"
-  | Times -> `String "Times"
-  | Div -> `String "Div"
-  | And -> `String "And"
-  | Or -> `String "Or"
-  | Eq -> `String "Eq"
-  | Neq -> `String "Neq"
-  | Lt -> `String "Lt"
-  | Leq -> `String "Leq"
-  | Gt -> `String "Gt"
-  | Geq -> `String "Geq"
+  | Plus (_, line) -> `String ("Plus" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Minus (_, line) -> `String ("Minus" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Times (_, line) -> `String ("Times" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Div (_, line) -> `String ("Div" ^ " (Line: " ^ string_of_int line ^ ")")
+  | And (_, line) -> `String ("And" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Or (_, line) -> `String ("Or" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Eq (_, line) -> `String ("Eq" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Neq (_, line) -> `String ("Neq" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Lt (_, line) -> `String ("Lt" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Leq (_, line) -> `String ("Leq" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Gt (_, line) -> `String ("Gt" ^ " (Line: " ^ string_of_int line ^ ")")
+  | Geq (_, line) -> `String ("Geq" ^ " (Line: " ^ string_of_int line ^ ")")

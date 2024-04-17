@@ -13,18 +13,18 @@ type var_id = VarId of string * metainfo
 type sync_label = LabelId of string * metainfo
 
 type bin_op =
-  | Plus
-  | Minus
-  | Times
-  | Div
-  | And
-  | Or
-  | Eq
-  | Neq
-  | Lt
-  | Leq
-  | Gt
-  | Geq
+  | Plus of metainfo
+  | Minus of metainfo
+  | Times of metainfo
+  | Div of metainfo
+  | And of metainfo
+  | Or of metainfo
+  | Eq of metainfo
+  | Neq of metainfo
+  | Lt of metainfo
+  | Leq of metainfo
+  | Gt of metainfo
+  | Geq of metainfo
 
 type local_type =
   | TUnit

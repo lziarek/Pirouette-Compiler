@@ -9,9 +9,9 @@
 %token TRUE FALSE
 %token UNIT_T INT_T STRING_T BOOL_T
 %token FUN TYPE
-%token PLUS MINUS TIMES DIV
-%token AND OR
-%token EQ NEQ LT LEQ GT GEQ
+%token <string * int> PLUS MINUS TIMES DIV
+%token <string * int> AND OR
+%token <string * int> EQ NEQ LT LEQ GT GEQ
 %token LPAREN RPAREN LBRACKET RBRACKET
 %token <string * int> COMMA DOT COLON SEMICOLON
 %token VERTICAL UNDERSCORE
@@ -165,15 +165,15 @@ value:
   | VERTICAL local_pattern ARROW local_expr { ($2, $4) }
 
 %inline bin_op:
-  | PLUS  { Plus }
-  | MINUS { Minus }
-  | TIMES { Times }
-  | DIV   { Div }
-  | AND   { And }
-  | OR    { Or }
-  | EQ    { Eq }
-  | NEQ   { Neq }
-  | LT    { Lt }
-  | LEQ   { Leq }
-  | GT    { Gt }
-  | GEQ   { Geq }
+  | PLUS  { Plus ($1) }
+  | MINUS { Minus ($1) }
+  | TIMES { Times ($1) }
+  | DIV   { Div ($1) }
+  | AND   { And ($1) }
+  | OR    { Or ($1) }
+  | EQ    { Eq ($1) }
+  | NEQ   { Neq ($1) }
+  | LT    { Lt ($1) }
+  | LEQ   { Leq ($1) }
+  | GT    { Gt ($1) }
+  | GEQ   { Geq ($1) }
