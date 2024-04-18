@@ -1,1 +1,1 @@
-l.var : l.unit
+y := fst(P1."Hello", P1."World");
