@@ -11,6 +11,7 @@ let generate_node_name () =
 
 let rec generate_dot_code (Ast.Choreo.Prog program) =
   let (code,_) = dot_stmts program in
+  node_counter := 0;
   Printf.sprintf "digraph G {\n%s\n}\n" code
 
 and dot_stmts (stmts : Ast.Choreo.statement list) : string * string =
