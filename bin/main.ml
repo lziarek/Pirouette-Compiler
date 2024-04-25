@@ -1,6 +1,5 @@
-(* open Ast.Interface *)
+open Ast.Interface
 open Parsing.Interface
-open Prettyprint.Interface
 
 let () =
   if Array.length Sys.argv < 2 then (
@@ -12,5 +11,5 @@ let () =
     let lexbuf = Lexing.from_channel file_ic in
     let program = parse_program lexbuf in
     (*print_endline (dump_choreo_ast program)*)
-      pp_ast Format.std_formatter program;
+      pretty_print Format.std_formatter program;
     close_in file_ic

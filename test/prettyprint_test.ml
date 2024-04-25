@@ -1,9 +1,10 @@
 open OUnit2
 open Parsing.Interface
+open Ast.Interface
 
 let peq (s : string) =
   let program = parse_program (Lexing.from_string s) in
-  let _ = Prettyprint.Interface.pp_ast Format.str_formatter program in
+  let _ = pretty_print Format.str_formatter program in
   let program' = parse_program (Lexing.from_string (Format.flush_str_formatter ())) in
   assert_equal program program'
 

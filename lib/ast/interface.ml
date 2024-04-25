@@ -1,5 +1,8 @@
 open Choreo
 open Yojson.Basic
+open Choreo_pp
+
+let pretty_print fmt prog = pp_ast fmt prog
 
 let rec dump_choreo_ast prog = dump_program prog |> pretty_to_string
 
