@@ -1,3 +1,9 @@
-(tests
- (names parsing_test prettyprint_test)
- (libraries parsing ast ounit2))
+(executable
+ (name parsing_test)
+ (modules parsing_test)
+ (libraries ast parsing ounit2))
+
+(executable
+ (name prettyprint_test)
+ (modules prettyprint_test testcases)
+ (libraries ast parsing ounit2))

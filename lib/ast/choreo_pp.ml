@@ -1,8 +1,7 @@
-open Choreo
-open Format
-open Local_pp
-
 (*
+  Files: choreo_pp.ml & local_pp.ml
+  Date: 04/25/2024
+
   A pretty print library to print Pirouette code in format using
   the Format module in OCaml: https://v2.ocaml.org/api/Format.html
 
@@ -14,7 +13,6 @@ open Local_pp
   - file: Format.formatter_of_out_channel (open_out "file_name")
 *)
 
-
 (*
   pp_ast:
   Input: 
@@ -23,6 +21,11 @@ open Local_pp
 
   Print the list of statements in the format and a new line when finish
 *)
+
+open Choreo
+open Format
+open Local_pp
+
 let rec pp_ast fmt (Prog stmts) = 
   pp_stmts fmt stmts;
   pp_print_newline fmt ()

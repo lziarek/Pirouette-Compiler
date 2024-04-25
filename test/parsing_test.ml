@@ -1,7 +1,4 @@
 open OUnit2
-open Ast.Local
-open Ast.Choreo
-(* open Ast.Net *)
 open Parsing.Interface
 
 (* comment *)

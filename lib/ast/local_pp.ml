@@ -1,3 +1,18 @@
+(*
+  Files: choreo_pp.ml & local_pp.ml
+  Date: 04/25/2024
+
+  A pretty print library to print Pirouette code in format using
+  the Format module in OCaml: https://v2.ocaml.org/api/Format.html
+
+  Format.formatter fmt: 
+  print code to:
+  - standard output Stdlib.stdout: Format.std_formatter
+  - standard error Stdlib.stderr: Format.err_formatter
+  - string {use stdbuffer in Format lib}: Format.str_formatter & Format.flush_str_formatter
+  - file: Format.formatter_of_out_channel (open_out "file_name")
+*)
+
 open Local
 open Format
 
