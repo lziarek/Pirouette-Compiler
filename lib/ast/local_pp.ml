@@ -18,7 +18,7 @@ open Format
 
 let rec pp_local_pattern fmt patn =
   match patn with
-  | Default -> fprintf fmt "Default"
+  | Default -> fprintf fmt "_"
   | Val v -> fprintf fmt "%s" (string_of_value v)
   | Var (VarId id) -> fprintf fmt "%s" id
   | Left patn -> fprintf fmt "left %a" pp_local_pattern patn

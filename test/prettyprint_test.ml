@@ -13,36 +13,36 @@ open Parsing.Interface
 open Ast.Interface
 open Testcases
 
-let pp_eq (s : string) =
+let peq (s : string) =
   let program = parse_program (Lexing.from_string s) in
   let _ = pretty_print Format.str_formatter program in
   let program' = parse_program (Lexing.from_string (Format.flush_str_formatter ())) in
   assert_equal program program'
 
-let test_declaration_basic _ = pp_eq declaration_basic
-let test_new_decl _ = pp_eq new_decl
-let test_int_assign _ = pp_eq int_assign
-let test_decl_expr _ = pp_eq decl_expr
-let test_pair_assign _ = pp_eq pair_assign
-let test_binary_ops _ = pp_eq binary_ops
-let test_first_pair _ = pp_eq first_pair
-let test_second_pair _ = pp_eq second_pair
-let test_decl_send _ = pp_eq decl_send
-
 let suite =
   "Pretty print Tests"
   >::: [
          "Declaration"
-         >::: [ "Basic statement" >:: test_declaration_basic;
-                "New declaration" >:: test_new_decl;
-                "Int assignment" >:: test_int_assign;
-                "Pair Declaration" >:: test_decl_expr;
-                "Pair assignment" >:: test_pair_assign;
-                "Binary operation" >:: test_binary_ops;
-                "Send first pair" >:: test_first_pair;
-                "Send second pair" >:: test_second_pair;
-                "Declaration with send" >:: test_decl_send;
+         >::: [ "Basic statement" >:: (fun _ -> peq declaration_basic);
+                "New declaration" >:: (fun _ -> peq new_decl);
+                "Pair Declaration" >:: (fun _ -> peq decl_expr);
+                "Declaration with send" >:: (fun _ -> peq decl_send);
+                "Declaration with sum expression" >:: (fun _ -> peq decl_sum_expr);
+                "New send func type" >:: (fun _ -> peq decl_app_send_func);
+                "Accept return from lambda" >:: (fun _ -> peq ret_lambda_func);
               ];
+         "Assignment"
+         >::: [ "Int assignment" >:: (fun _ -> peq int_assign);
+                "Pair assignment" >:: (fun _ -> peq pair_assign);
+                "Binary operation" >:: (fun _ -> peq binary_ops);
+                "Send first pair" >:: (fun _ -> peq first_pair);
+                "Send second pair" >:: (fun _ -> peq second_pair);
+                "Sync send" >:: (fun _ -> peq sync_send);
+                "Choreo left and right assign" >:: (fun _ -> peq choreo_lr_assign);
+              ];
+        "Pattern Matching"
+        >::: [ "Choreo pattern matching" >:: (fun _ -> peq choreo_pat_match);
+             ];
        ]
 
 let () = run_test_tt_main suite

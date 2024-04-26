@@ -45,21 +45,21 @@ and pp_stmts fmt stmts =
   | [] -> ()
   | stmt :: stmts -> 
     pp_stmt fmt stmt;
-    if stmts <> [] then fprintf fmt "@,";
+    if stmts <> [] then fprintf fmt "\n";
     pp_stmts fmt stmts
 
 and pp_stmt fmt statement =
   match statement with
   | Decl (patn, typ) ->
-      fprintf fmt "%a : %a;" pp_choreo_pattern patn pp_choreo_typ typ
+      fprintf fmt "%a : %a;\n" pp_choreo_pattern patn pp_choreo_typ typ
   | Assign (patn, expr) ->
     fprintf fmt "%a :=@;<1 2>%a;" pp_choreo_pattern patn pp_choreo_expr expr
   | TypeDecl (VarId id, typ) ->
-      fprintf fmt "type %s := %a;" id pp_choreo_typ typ
+      fprintf fmt "type %s := %a;\n" id pp_choreo_typ typ
 
 and pp_choreo_pattern fmt patn =
   match patn with
-  | Default -> fprintf fmt "Default"
+  | Default -> fprintf fmt "_"
   | LocPatt (LocId loc, lp) -> fprintf fmt "%s.%a" loc pp_local_pattern lp
   | Var (VarId id) -> fprintf fmt "%s" id
   | Left patn -> fprintf fmt "left %a" pp_choreo_pattern patn
@@ -91,7 +91,7 @@ and pp_choreo_expr fmt expr =
   | If (cond, then_expr, else_expr) ->
     fprintf fmt "@[<v>if %a then@;<1 2>%a@,@[<v 2>else@;%a@]@]" pp_choreo_expr cond pp_choreo_expr then_expr pp_choreo_expr else_expr
   | Let (decl_block, expr) ->
-    fprintf fmt "@[<hov 2>let %a in@]@;<0 2>@[<2>%a@]" pp_stmts decl_block pp_choreo_expr expr
+    fprintf fmt "@[<hov 2>let %a in@]@;<1 2>@[<2>%a@]" pp_stmts decl_block pp_choreo_expr expr
   | FunDef (VarId var_id, expr) ->
     fprintf fmt "fun %s -> %a" var_id pp_choreo_expr expr
   | FunApp (f, arg) -> fprintf fmt "%a %a" pp_choreo_expr f pp_choreo_expr arg
@@ -101,7 +101,7 @@ and pp_choreo_expr fmt expr =
   | Left e -> fprintf fmt "left %a" pp_choreo_expr e
   | Right e -> fprintf fmt "right %a" pp_choreo_expr e
   | Match (e, cases) ->
-      fprintf fmt "@[<v>match %a with@;<1 2>%a@]" pp_choreo_expr e pp_choreo_cases cases
+      fprintf fmt "@[<hov>match %a with@]@;@[<2>%a@]" pp_choreo_expr e pp_choreo_cases cases
 
 and pp_choreo_cases fmt case_list = 
   match case_list with
@@ -111,4 +111,4 @@ and pp_choreo_cases fmt case_list =
     pp_choreo_cases fmt cases
 
 and pp_choreo_case fmt (patn, expr) =
-  fprintf fmt "| %a -> %a@" pp_choreo_pattern patn pp_choreo_expr expr
+  fprintf fmt "| %a -> %a\n" pp_choreo_pattern patn pp_choreo_expr expr
