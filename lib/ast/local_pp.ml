@@ -84,5 +84,5 @@ and pp_bin_op fmt op =
 and string_of_value v =
   match v with
   | `Int i -> string_of_int i
-  | `String s -> s
+  | `String s -> "\"" ^ s ^ "\""
   | `Bool b -> string_of_bool b

@@ -2,6 +2,10 @@ build:
 	dune build
 
 .PHONY: test
+
+pp:
+	dune exec bin/main.exe examples/2.txt
+
 test-parsing:
 	dune exec test/parsing_test.exe
 
