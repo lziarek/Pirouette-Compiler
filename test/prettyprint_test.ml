@@ -22,26 +22,30 @@ let peq (s : string) =
 let suite =
   "Pretty print Tests"
   >::: [
-         "Declaration"
-         >::: [ "Basic statement" >:: (fun _ -> peq declaration_basic);
+        "Declaration"
+        >::: [ "Basic statement" >:: (fun _ -> peq declaration_basic);
                 "New declaration" >:: (fun _ -> peq new_decl);
                 "Pair Declaration" >:: (fun _ -> peq decl_expr);
                 "Declaration with send" >:: (fun _ -> peq decl_send);
                 "Declaration with sum expression" >:: (fun _ -> peq decl_sum_expr);
                 "New send func type" >:: (fun _ -> peq decl_app_send_func);
+                "New local function"  >:: (fun _ -> peq decl_app_lcl_func);
                 "Accept return from lambda" >:: (fun _ -> peq ret_lambda_func);
+                "Declaration of local prod & sum typ" >:: (fun _ -> peq lcl_prod_sum);
               ];
-         "Assignment"
-         >::: [ "Int assignment" >:: (fun _ -> peq int_assign);
+        "Assignment"
+        >::: [ "Int assignment" >:: (fun _ -> peq int_assign);
                 "Pair assignment" >:: (fun _ -> peq pair_assign);
                 "Binary operation" >:: (fun _ -> peq binary_ops);
-                "Send first pair" >:: (fun _ -> peq first_pair);
-                "Send second pair" >:: (fun _ -> peq second_pair);
+                "Assign choreo pair" >:: (fun _ -> peq choreo_pair);
+                "Assign local pair" >:: (fun _ -> peq lcl_pair);
                 "Sync send" >:: (fun _ -> peq sync_send);
                 "Choreo left and right assign" >:: (fun _ -> peq choreo_lr_assign);
+                "Local left and right assign" >:: (fun _ -> peq lcl_lr_assign);
               ];
         "Pattern Matching"
         >::: [ "Choreo pattern matching" >:: (fun _ -> peq choreo_pat_match);
+                "Local pattern matching" >:: (fun _ -> peq lcl_pat_match);
              ];
        ]
 

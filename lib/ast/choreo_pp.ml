@@ -70,7 +70,7 @@ and pp_choreo_pattern fmt patn =
 and pp_choreo_typ fmt choreo_typ =
   match choreo_typ with
   | TUnit -> fprintf fmt "unit"
-  | TLoc (LocId id, typ) -> fprintf fmt "%s.%a" id pp_local_typ typ
+  | TLoc (LocId id, typ) -> fprintf fmt "%s.(%a)" id pp_local_typ typ
   | TSend (typ1, typ2) ->
       fprintf fmt "%a -> %a" pp_choreo_typ typ1 pp_choreo_typ typ2
   | TProd (typ1, typ2) ->
@@ -83,7 +83,7 @@ and pp_choreo_expr fmt expr =
   match expr with
   | Unit -> fprintf fmt "()"
   | Var (VarId id) -> fprintf fmt "%s" id
-  | LocExpr (LocId id, le) -> fprintf fmt "%s.(%a)" id pp_local_expr le
+  | LocExpr (LocId id, le) -> fprintf fmt "%s.%a" id pp_local_expr le
   | Send (expr, LocId loc_id) ->
     fprintf fmt "%a ~> %s" pp_choreo_expr expr loc_id
   | Sync (LocId loc_id1, LabelId label, LocId loc_id2, expr) ->

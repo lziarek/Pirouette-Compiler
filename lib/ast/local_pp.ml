@@ -52,9 +52,9 @@ and pp_local_expr fmt loc_expr =
   | BinOp (e1, op, e2) ->
       fprintf fmt "%a %a %a" pp_local_expr e1 pp_bin_op op pp_local_expr e2
   | Let (VarId id, e1, e2) ->
-      fprintf fmt "let %s := %a in@ %a" id pp_local_expr e1 pp_local_expr e2
+      fprintf fmt "@[<hov 2>let %s := %a in@]@;<1 2>@[<2>%a@]" id pp_local_expr e1 pp_local_expr e2
   | Match (e, cases) ->
-      fprintf fmt "@[<v>match %a with@;<1 2>%a@]" pp_local_expr e pp_local_cases cases
+      fprintf fmt "@[<hov>match %a with@]@;@[<2>%a@]" pp_local_expr e pp_local_cases cases
 
 and pp_local_cases fmt case_list = 
   match case_list with
@@ -64,7 +64,7 @@ and pp_local_cases fmt case_list =
     pp_local_cases fmt cases
 
 and pp_local_case fmt (patn, expr) =
-  fprintf fmt "| %a -> %a@" pp_local_pattern patn pp_local_expr expr
+  fprintf fmt "| %a -> %a\n" pp_local_pattern patn pp_local_expr expr
 
 and pp_bin_op fmt op =
   match op with

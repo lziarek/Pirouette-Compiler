@@ -13,7 +13,7 @@ test-pp:
 	dune exec --instrument-with bisect_ppx test/prettyprint_test.exe
 
 bisect-pp: clean test-pp
-	bisect-ppx-report html --theme=light
+	bisect-ppx-report html --theme=dark
 
 clean:
 	dune clean
