@@ -124,11 +124,23 @@ and read_string buf = parse
   | _   { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
   | eof { raise (SyntaxError "String is not terminated") }
 
+
+(** [read_single_line_comment] processes single-line comments in the lexer.
+    
+    - Continues to consume characters until a newline is encountered, then resumes normal lexing.
+    - If EOF is reached during a comment, it returns an EOF token with metadata.
+*)
 and read_single_line_comment = parse
   | newline { next_line lexbuf; read lexbuf }
   | _       { read_single_line_comment lexbuf }
   | eof     { EOF (metainfo lexbuf) }
 
+(** [read_multi_line_comment] processes multi-line comments in the lexer.
+    
+    - Skips all characters within the comment boundaries until the closing delimiter is found.
+    - Handles newlines within the comment to maintain accurate line tracking.
+    - Raises a SyntaxError if EOF is reached without finding the closing delimiter.
+*)
 and read_multi_line_comment = parse
   | "-}"    { read lexbuf }
   | newline { next_line lexbuf; read_multi_line_comment lexbuf }
