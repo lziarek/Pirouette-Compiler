@@ -4,12 +4,26 @@
 
   exception SyntaxError of string
 
+  (** [next_line lexbuf] advances the lexer to the next line in the input buffer.
+    
+    - This function increments the line number in the lexer buffer's current position
+      and sets the beginning of line marker to the current position in the buffer.
+    - It is typically called when a newline character is encountered in the input.
+  *)
   let next_line lexbuf =
     let pos = lexbuf.lex_curr_p in
     lexbuf.lex_curr_p <- { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = lexbuf.lex_curr_pos }
 
   let filename lexbuf = lexbuf.lex_curr_p.pos_fname
   let line lexbuf = lexbuf.lex_curr_p.pos_lnum
+
+  (** [metainfo lexbuf] retrieves the current file name and line number from the lexer buffer.
+    
+    - Returns: A tuple containing the file name and line number of the current position
+      in the lexer buffer.
+    - This function is useful for error reporting and debugging, providing context
+      about where in the source file the lexer is currently operating.
+  *)
   let metainfo lexbuf= (filename lexbuf, line lexbuf)
 
 }
@@ -22,6 +36,17 @@ let newline = '\r' | '\n' | "\r\n"
 let integer = '-'? digit+
 let identifier = (alpha | '_' ) (alpha | digit | '_')*
 
+(** [read lexbuf] is the main lexer function that tokenizes the input based on the
+    defined rules and patterns.
+    
+    - This function reads characters from the input buffer and matches them against
+      predefined patterns to identify tokens such as identifiers, literals, operators,
+      and keywords.
+    - Returns: It returns a token each time it is called, until it reaches the end
+      of the file, at which point it returns EOF.
+    - Note: This function handles whitespace, comments, and newline characters
+      internally, often recursively calling itself to skip over non-token characters.
+*)
 rule read = parse
   | white              { read lexbuf }
   | "--"               { read_single_line_comment lexbuf }

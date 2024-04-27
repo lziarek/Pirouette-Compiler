@@ -12,6 +12,23 @@ type loc_id = LocId of string * metainfo
 type var_id = VarId of string * metainfo
 type sync_label = LabelId of string * metainfo
 
+
+
+(*
+  Type: bin_op
+  Description: Represents binary operations in the AST with associated metadata(see above).
+
+  Variants:
+  - Eq: Represents equality (==)
+  - Neq: Represents inequality (!=)
+  - Lt: Represents less than (<)
+  - Leq: Represents less than or equal (<=)
+  - Gt: Represents greater than (>)
+  - Geq: Represents greater than or equal (>=)
+
+  Each variant is tagged with a `metainfo` (see above).
+*)
+
 type bin_op =
   | Plus of metainfo
   | Minus of metainfo

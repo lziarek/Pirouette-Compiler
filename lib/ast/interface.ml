@@ -233,6 +233,17 @@ and dump_local_type = function
   | TSum (t1, t2) ->
       `Assoc [ ("TSum", `List [ dump_local_type t1; dump_local_type t2 ]) ]
 
+
+(** [dump_bin_op op] returns a string representation of the binary operator [op] 
+    including metainfo(see ast/local.ml).
+    
+    - For example:
+      [dump_bin_op (Plus (_, 42))] returns ["Plus (Line: 42)"].
+    
+    This function is used primarily for debugging and logging purposes, to provide a clear,
+    human-readable representation of binary operations within the AST (Abstract Syntax Tree).
+*)
+
 and dump_bin_op = function
   | Plus (_, line) -> `String ("Plus" ^ " (Line: " ^ string_of_int line ^ ")")
   | Minus (_, line) -> `String ("Minus" ^ " (Line: " ^ string_of_int line ^ ")")
