@@ -126,6 +126,10 @@ local_pattern:
   | RIGHT local_pattern                             { Right $2 }
   | LPAREN local_pattern RPAREN                     { $2 }
 
+
+(** [choreo_type] parses choreography types and constructs corresponding AST nodes.
+    - Returns: An AST node representing the choreography type.
+*)
 choreo_type:
   | UNIT_T                        { TUnit }
   | loc_id DOT local_type         { TLoc ($1, $3) }
@@ -133,6 +137,11 @@ choreo_type:
   | choreo_type TIMES choreo_type { TProd ($1, $3) }
   | choreo_type PLUS choreo_type  { TSum ($1, $3) }
   | LPAREN choreo_type RPAREN     { $2 }
+
+
+(** [local_type] parses local types and constructs corresponding AST nodes.
+    - Returns: An AST node representing the local type.
+*)  
 
 local_type:
   | UNIT_T                      { TUnit }
@@ -143,14 +152,25 @@ local_type:
   | local_type PLUS local_type  { TSum ($1, $3) }
   | LPAREN local_type RPAREN    { $2 }
   
+(** [loc_id] parses an identifier for a location and constructs a corresponding AST node.
+
+    - Returns: A `LocId` node containing the identifier and its metadata.
+    - Example: Parsing an `ID` token results in a `LocId` node with the identifier and associated metadata.
+*)
 loc_id:
   | ID { let (id, metainfo) = $1 in LocId (id, metainfo) }
 
+(** [var_id] parses an identifier for a variable and constructs a corresponding AST node.
+
+    - Returns: A `VarId` node containing the identifier and its metadata.
+    - Example: Parsing an `ID` token results in a `VarId` node with the identifier and associated metadata.
+*)
 var_id:
   | ID { let (id, metainfo) = $1 in VarId (id, metainfo) }
 
 sync_label:
   | ID { let (id, metainfo) = $1 in LabelId (id, metainfo) }
+
 
 value:
   | INT    { `Int $1 }
@@ -158,11 +178,35 @@ value:
   | TRUE   { `Bool true }
   | FALSE  { `Bool false }
 
+(** [case] parses case expressions for choreography expressions and constructs corresponding AST nodes.
+
+    Each case is defined by a pattern and an expression, separated by an arrow.
+
+    - Returns: A tuple containing the parsed pattern and the corresponding choreography expression.
+    - Example: Parsing a vertical bar, a pattern, an arrow, and a choreography expression results in a tuple of the pattern and expression.
+*)
+
 %inline case:
   | VERTICAL pattern ARROW choreo_expr1     { ($2, $4) }
 
+(** [local_case] parses case expressions for local expressions and constructs corresponding AST nodes.
+
+    Similar to [case], but specifically for local expressions within a choreography.
+
+    - Returns: A tuple containing the parsed local pattern and the corresponding local expression.
+    - Example: Parsing a vertical bar, a local pattern, an arrow, and a local expression results in a tuple of the local pattern and expression.
+*)
+
 %inline local_case:
   | VERTICAL local_pattern ARROW local_expr { ($2, $4) }
+
+(** [bin_op] parses binary operators and constructs corresponding AST nodes.
+
+    Each operator is associated with a specific constructor that takes location information as an argument.
+
+    - Returns: An AST node representing the binary operation.
+    - Example: Parsing the token PLUS with location info at position 1 results in [Plus ($1)].
+*)
 
 %inline bin_op:
   | PLUS  { Plus ($1) }
