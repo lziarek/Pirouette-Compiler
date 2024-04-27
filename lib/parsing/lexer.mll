@@ -102,6 +102,14 @@ rule read = parse
   | _                  { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
   | eof                { EOF (metainfo lexbuf) }
 
+(** [read_string buf] processes string literals recursively in the lexer.
+    
+    - This function reads characters from the input buffer and constructs a string
+      literal token by concatenating the characters.
+    - It handles escape sequences such as \n, \t, \r, \b, \f, and \\.
+    - Raises a SyntaxError if an illegal escape sequence is encountered or if the
+      string is not terminated.
+*)
 and read_string buf = parse
   | '"'       { STRING (Buffer.contents buf) }
   | '\\' ('/' | '\\' | 'b' | 'f' | 'n' | 'r' | 't' as esc)

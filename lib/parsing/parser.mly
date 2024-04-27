@@ -69,19 +69,32 @@
 
 %%
 
+(** [program] parses a decl_block aka list of statements and add EOF at the end of code block.*)
 program:
   | decl_block EOF { Prog ($1, $2) } /* filename at EOF*/
 
+
+(** [decl_block] parse and returns the list of statements. *)
 decl_block:
   | list(statement) { $1 }
 
+(** [statement] parses statements within a choreography and constructs corresponding AST nodes.
+
+    - Returns: An AST node representing the statement.
+    - Example: Parsing a pattern, a colon, a choreography type, and a semicolon results in a `Decl` node with the pattern, type, and metadata.*)
 /* TODO: Removing the need for semicolons */
 statement:
   | pattern COLON choreo_type SEMICOLON        { Decl ($1, $3, $2) } // metainfo at $2
   | pattern COLONEQ choreo_expr SEMICOLON      { Assign ($1, $3, $4) } // metainfo at $4
   | TYPE var_id COLONEQ choreo_type SEMICOLON? { TypeDecl ($2, $4) }
 
-/* Associativity increases from expr to expr3, with each precedence level falling through to the next. */
+(** [choreo_expr] parses choreography expressions and constructs corresponding AST nodes.
+
+    Choreo_expr patterns associativity increases from expr to expr3, with each precedence level falling through to the next.
+
+    - Returns: An AST node representing the choreography expression.
+    - Example: Parsing an if-then-else expression results in an `If` node with the condition and branches.
+*)
 choreo_expr:
   | IF choreo_expr THEN choreo_expr ELSE choreo_expr                             { If ($2, $4, $6) }
   | LET decl_block IN choreo_expr                                                { Let ($2, $4) }
@@ -110,6 +123,9 @@ choreo_expr3:
   | loc_id DOT local_expr                                                        { LocExpr ($1, $3) }
   | LPAREN choreo_expr RPAREN                                                    { $2 }
 
+(** [local_expr] parses local expressions and constructs corresponding AST nodes.
+
+    - Returns: An AST node representing the local expression.*)
 local_expr:
   | LPAREN RPAREN                                   { Unit }
   | value                                           { Val $1 }                                                                    
@@ -146,6 +162,7 @@ local_pattern:
 
 
 (** [choreo_type] parses choreography types and constructs corresponding AST nodes.
+
     - Returns: An AST node representing the choreography type.
 *)
 choreo_type:
@@ -158,6 +175,7 @@ choreo_type:
 
 
 (** [local_type] parses local types and constructs corresponding AST nodes.
+
     - Returns: An AST node representing the local type.
 *)  
 
