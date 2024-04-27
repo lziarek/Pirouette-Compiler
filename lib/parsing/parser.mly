@@ -3,6 +3,11 @@
   open Ast.Choreo
 %}
 
+(** Token Definitions:
+    - Defines the types and categories of tokens used by the parser.
+    - Each token can carry specific data types, such as strings, integers.
+*)
+
 %token <string * (string * int)> ID
 %token <int>    INT
 %token <string> STRING
@@ -22,6 +27,11 @@
 %token MATCH WITH
 %token <string * int> EOF /* filename */
 
+(** Type Declarations:
+    - Specifies the types of the non-terminal symbols used in the grammar.
+    - These types correspond to the data structures defined in the AST modules.
+*)
+
 %type <Ast.Choreo.program> program
 %type <Ast.Choreo.decl_block> decl_block
 %type <Ast.Choreo.statement> statement
@@ -36,6 +46,12 @@
 %type <Ast.Local.loc_id> loc_id
 %type <Ast.Local.var_id> var_id
 %type <Ast.Local.sync_label> sync_label
+
+
+
+(** Operator Precedence and Associativity:
+    - Defines the precedence and associativity rules for operators to resolve ambiguities in expressions.
+*)
 
 %nonassoc IN
 %nonassoc VERTICAL
@@ -108,6 +124,7 @@ local_expr:
   | MATCH local_expr WITH nonempty_list(local_case) { Match ($2, $4) }
   | LPAREN local_expr RPAREN                        { $2 }
 
+(** [pattern] parses patterns used in choreography expressions and constructs corresponding AST nodes.*)
 pattern:
   | UNDERSCORE                          { Default }
   | var_id                              { Var $1 }
@@ -117,6 +134,7 @@ pattern:
   | RIGHT pattern                       { Right $2 }
   | LPAREN pattern RPAREN               { $2 }
   
+(** [local_pattern] parses patterns used in local expressions within choreographies and constructs corresponding AST nodes.*)
 local_pattern:
   | UNDERSCORE                                      { Default }
   | value                                           { Val $1 }
