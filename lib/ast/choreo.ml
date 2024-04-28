@@ -1,36 +1,37 @@
 open Local
+open Metainfo
 
 type choreo_type =
-  | TUnit
-  | TLoc of loc_id * local_type
-  | TSend of choreo_type * choreo_type
-  | TProd of choreo_type * choreo_type
-  | TSum of choreo_type * choreo_type
+  | TUnit of metainfo
+  | TLoc of loc_id * local_type * metainfo
+  | TSend of choreo_type * choreo_type * metainfo
+  | TProd of choreo_type * choreo_type * metainfo
+  | TSum of choreo_type * choreo_type * metainfo
 
 type pattern =
-  | Default
-  | Var of var_id
-  | Pair of pattern * pattern
-  | LocPatt of loc_id * local_pattern
-  | Left of pattern
-  | Right of pattern
+  | Default of metainfo
+  | Var of var_id * metainfo
+  | Pair of pattern * pattern * metainfo
+  | LocPatt of loc_id * local_pattern * metainfo
+  | Left of pattern * metainfo
+  | Right of pattern * metainfo
 
 type choreo_expr =
-  | Unit
-  | Var of var_id
-  | LocExpr of loc_id * local_expr
-  | Send of choreo_expr * loc_id
-  | Sync of loc_id * sync_label * loc_id * choreo_expr
-  | If of choreo_expr * choreo_expr * choreo_expr
-  | Let of decl_block * choreo_expr
-  | FunDef of var_id * choreo_expr
-  | FunApp of choreo_expr * choreo_expr
-  | Pair of choreo_expr * choreo_expr
-  | Fst of choreo_expr
-  | Snd of choreo_expr
-  | Left of choreo_expr
-  | Right of choreo_expr
-  | Match of choreo_expr * (pattern * choreo_expr) list
+  | Unit of metainfo
+  | Var of var_id * metainfo
+  | LocExpr of loc_id * local_expr * metainfo
+  | Send of choreo_expr * loc_id * metainfo
+  | Sync of loc_id * sync_label * loc_id * choreo_expr * metainfo
+  | If of choreo_expr * choreo_expr * choreo_expr * metainfo
+  | Let of decl_block * choreo_expr * metainfo
+  | FunDef of var_id * choreo_expr * metainfo
+  | FunApp of choreo_expr * choreo_expr * metainfo
+  | Pair of choreo_expr * choreo_expr * metainfo
+  | Fst of choreo_expr * metainfo
+  | Snd of choreo_expr * metainfo
+  | Left of choreo_expr * metainfo
+  | Right of choreo_expr * metainfo
+  | Match of choreo_expr * (pattern * choreo_expr) list * metainfo
 
 
   (** The [statement] type represents different kinds of statements in a choreography language's AST.
@@ -51,8 +52,41 @@ type choreo_expr =
 and statement =
   | Decl of pattern * choreo_type * metainfo
   | Assign of pattern * choreo_expr * metainfo
-  | TypeDecl of var_id * choreo_type
+  | TypeDecl of var_id * choreo_type * metainfo
 
 and decl_block = statement list
 
 type program = Prog of decl_block * metainfo
+
+let metainfo_of_ChorTyp = function
+  | TUnit m -> m
+  | TLoc (_, _, m) -> m
+  | TSend (_, _, m) -> m
+  | TProd (_, _, m) -> m
+  | TSum (_, _, m) -> m
+
+let metainfo_of_Patt = function
+  | Default m -> m
+  | Var (_, m) -> m
+  | Pair (_, _, m) -> m
+  | LocPatt (_, _, m) -> m
+  | Left (_, m) -> m
+  | Right (_, m) -> m
+
+let metainfo_of_ChorExpr = function
+  | Unit m -> m
+  | Var (_, m) -> m
+  | LocExpr (_, _, m) -> m
+  | Send (_, _, m) -> m
+  | Sync (_, _, _, _, m) -> m
+  | If (_, _, _, m) -> m
+  | Let (_, _, m) -> m
+  | FunDef (_, _, m) -> m
+  | FunApp (_, _, m) -> m
+  | Pair (_, _, m) -> m
+  | Fst (_, m) -> m
+  | Snd (_, m) -> m
+  | Left (_, m) -> m
+  | Right (_, m) -> m
+  | Match (_, _, m) -> m
+

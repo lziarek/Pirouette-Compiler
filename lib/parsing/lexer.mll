@@ -51,10 +51,10 @@ rule read = parse
   | white              { read lexbuf }
   | "--"               { read_single_line_comment lexbuf }
   | "{-"               { read_multi_line_comment lexbuf }
-  | '('                { LPAREN }
-  | ')'                { RPAREN }
-  | '['                { LBRACKET }
-  | ']'                { RBRACKET }
+  | '('                { LPAREN (metainfo lexbuf) }
+  | ')'                { RPAREN (metainfo lexbuf) }
+  | '['                { LBRACKET (metainfo lexbuf) }
+  | ']'                { RBRACKET (metainfo lexbuf) }
   | ','                { COMMA (metainfo lexbuf) }
   | '.'                { DOT (metainfo lexbuf) }
   | ':'                { COLON (metainfo lexbuf) }
@@ -71,31 +71,31 @@ rule read = parse
   | "<="               { LEQ (metainfo lexbuf) }
   | ">"                { GT (metainfo lexbuf) }
   | ">="               { GEQ (metainfo lexbuf) }
-  | '|'                { VERTICAL }
-  | '_'                { UNDERSCORE }
+  | '|'                { VERTICAL (metainfo lexbuf)}
+  | '_'                { UNDERSCORE (metainfo lexbuf)}
   | ":="               { COLONEQ }
   | "->"               { ARROW }
   | "~>"               { TILDE_ARROW }
-  | "unit"             { UNIT_T }
-  | "int"              { INT_T }
-  | "string"           { STRING_T }
-  | "bool"             { BOOL_T }
-  | "fun"              { FUN }
-  | "type"             { TYPE }
-  | "true"             { TRUE }
-  | "false"            { FALSE }
-  | "if"               { IF }
-  | "then"             { THEN }
-  | "else"             { ELSE }
-  | "match"            { MATCH }
-  | "with"             { WITH }
-  | "let"              { LET }
-  | "in"               { IN }
-  | "fst"              { FST }
-  | "snd"              { SND }
-  | "left"             { LEFT }
-  | "right"            { RIGHT }
-  | integer as s       { INT (int_of_string s) }
+  | "unit"             { UNIT_T (metainfo lexbuf) }
+  | "int"              { INT_T (metainfo lexbuf) }
+  | "string"           { STRING_T (metainfo lexbuf) }
+  | "bool"             { BOOL_T(metainfo lexbuf)  }
+  | "fun"              { FUN (metainfo lexbuf) }
+  | "type"             { TYPE (metainfo lexbuf) }
+  | "true"             { TRUE (metainfo lexbuf) }
+  | "false"            { FALSE (metainfo lexbuf) }
+  | "if"               { IF (metainfo lexbuf) }
+  | "then"             { THEN (metainfo lexbuf) }
+  | "else"             { ELSE (metainfo lexbuf) }
+  | "match"            { MATCH (metainfo lexbuf) }
+  | "with"             { WITH (metainfo lexbuf) }
+  | "let"              { LET (metainfo lexbuf) }
+  | "in"               { IN (metainfo lexbuf) }
+  | "fst"              { FST (metainfo lexbuf) }
+  | "snd"              { SND (metainfo lexbuf) }
+  | "left"             { LEFT (metainfo lexbuf) }
+  | "right"            { RIGHT (metainfo lexbuf) }
+  | integer as s       { INT (int_of_string s, metainfo lexbuf) }
   | identifier as s    { ID (s, metainfo lexbuf) }
   | '"'                { read_string (Buffer.create 17) lexbuf }
   | newline            { next_line lexbuf; read lexbuf }
@@ -111,7 +111,7 @@ rule read = parse
       string is not terminated.
 *)
 and read_string buf = parse
-  | '"'       { STRING (Buffer.contents buf) }
+  | '"'       { STRING (Buffer.contents buf, metainfo lexbuf) }
   | '\\' ('/' | '\\' | 'b' | 'f' | 'n' | 'r' | 't' as esc)
     { let c = match esc with
         | '/'  -> '/'

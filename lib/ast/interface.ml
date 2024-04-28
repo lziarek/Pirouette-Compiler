@@ -21,58 +21,58 @@ and dump_stmt = function
             `Assoc [ ("pattern", dump_pattern p); ("choreo_expr", dump_choreo_expr e) ]
           );
         ]
-  | TypeDecl (VarId (id, (_, id_line)), t) ->
+  | TypeDecl (VarId (id, (_, id_line)), t, (_, line)) ->
       `Assoc
         [
-          ( "TypeDecl",
+          ( "TypeDecl (Line: " ^ string_of_int line ^ ")",
             `Assoc [ ("id (Line: " ^ string_of_int id_line ^ ")", `String id); ("choreo_type", dump_choreo_type t) ]
           );
         ]
 
 and dump_choreo_expr = function
-  | Unit -> `String "Unit"
-  | Var (VarId (id, (_, id_line))) ->
-      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
-  | Fst e ->
-      `Assoc [ ("Fst", dump_choreo_expr e) ]
-  | Snd e ->
-      `Assoc [ ("Snd", dump_choreo_expr e) ]
-  | Left e ->
-      `Assoc [ ("Left", dump_choreo_expr e) ]
-  | Right e ->
-      `Assoc [ ("Right", dump_choreo_expr e) ]
-  | LocExpr (LocId (loc, (_, loc_line)), e) ->
+  | Unit (_, line) -> `String ("Unit (Line: " ^ string_of_int line ^ ")")
+  | Var (VarId (id, _), (_, line)) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int line ^ ")", `String id) ]
+  | Fst (e, (_, line)) ->
+      `Assoc [ ("Fst (Line: " ^ string_of_int line ^ ")", dump_choreo_expr e) ]
+  | Snd (e, (_, line)) ->
+      `Assoc [ ("Snd (Line: " ^ string_of_int line ^ ")", dump_choreo_expr e) ]
+  | Left (e, (_, line)) ->
+      `Assoc [ ("Left (Line: " ^ string_of_int line ^ ")", dump_choreo_expr e) ]
+  | Right (e, (_, line)) ->
+      `Assoc [ ("Right (Line: " ^ string_of_int line ^ ")", dump_choreo_expr e) ]
+  | LocExpr (LocId (loc, (_, loc_line)), e, (_, line)) ->
       `Assoc
         [
-          ( "LocExpr",
+          ( "LocExpr (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [ ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc); ("local_expr", dump_local_expr e) ]
           );
         ]
-  | Send (e, LocId (loc, (_, loc_line))) ->
+  | Send (e, LocId (loc, (_, loc_line)), (_, line)) ->
       `Assoc
         [
-          ( "Send",
+          ( "Send (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [ ("choreo_expr", dump_choreo_expr e); ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc) ]
           );
         ]
-  | Sync (LocId (loc1, (_, loc1_line)), LabelId (label, _), LocId (loc2, (_, loc2_line)), e) ->
+  | Sync (LocId (loc1, (_, loc1_line)), LabelId (label, (_, label_line)), LocId (loc2, (_, loc2_line)), e, (_, line)) ->
       `Assoc
         [
-          ( "Sync",
+          ( "Sync (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("loc1 (Line: " ^ string_of_int loc1_line ^ ")", `String loc1);
-                ("label", `String label);
+                ("label (Line: " ^ string_of_int label_line ^ ")", `String label);
                 ("loc2 (Line: " ^ string_of_int loc2_line ^ ")", `String loc2);
                 ("choreo_expr", dump_choreo_expr e);
               ] );
         ]
-  | If (e1, e2, e3) ->
+  | If (e1, e2, e3, (_, line)) ->
       `Assoc
         [
-          ( "If",
+          ( "If Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("condition", dump_choreo_expr e1);
@@ -80,36 +80,36 @@ and dump_choreo_expr = function
                 ("else", dump_choreo_expr e3);
               ] );
         ]
-  | Let (decl_block, e) ->
+  | Let (decl_block, e, (_, line)) ->
       `Assoc
         [
-          ( "Let",
+          ( "Let (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("decl_block", `List (List.map dump_stmt decl_block));
                 ("choreo_expr", dump_choreo_expr e);
               ] );
         ]
-  | FunDef (VarId (id, (_, id_line)), e) ->
+  | FunDef (VarId (id, (_, id_line)), e, (_, line)) ->
       `Assoc
         [
-          ( "FunDef",
+          ( "FunDef (Line: " ^ string_of_int line ^ ")",
             `Assoc [ ("id (Line: " ^ string_of_int id_line ^ ")", `String id); ("choreo_expr", dump_choreo_expr e) ]
           );
         ]
-  | FunApp (e1, e2) ->
+  | FunApp (e1, e2, (_, line)) ->
       `Assoc
         [
-          ( "FunApp",
+          ( "FunApp (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [ ("fun", dump_choreo_expr e1); ("arg", dump_choreo_expr e2) ] );
         ]
-  | Pair (e1, e2) ->
-      `Assoc [ ("Pair", `List [ dump_choreo_expr e1; dump_choreo_expr e2 ]) ]
-  | Match (e, cases) ->
+  | Pair (e1, e2, (_, line)) ->
+      `Assoc [ ("Pair (Line: " ^ string_of_int line ^ ")", `List [ dump_choreo_expr e1; dump_choreo_expr e2 ]) ]
+  | Match (e, cases, (_, line)) ->
       `Assoc
         [
-          ( "Match",
+          ( "Match (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("choreo_expr", dump_choreo_expr e);
@@ -118,25 +118,28 @@ and dump_choreo_expr = function
         ]
 
 and dump_local_expr = function
-  | Unit -> `String "Unit"
-  | Val (`Int _ | `String _ | `Bool _ as v) ->
-      `Assoc [ ("Val", v) ]
-  | Var (VarId (id, (_, id_line))) ->
-      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
-  | Fst e ->
-      `Assoc [ ("Fst", dump_local_expr e) ]
-  | Snd e ->
-      `Assoc [ ("Snd", dump_local_expr e) ]
-  | Left e ->
-      `Assoc [ ("Left", dump_local_expr e) ]
-  | Right e ->
-      `Assoc [ ("Right", dump_local_expr e) ]
-  | Pair (e1, e2) ->
-      `Assoc [ ("Pair", `List [ dump_local_expr e1; dump_local_expr e2 ]) ]
-  | BinOp (e1, op, e2) ->
+  | Unit (_, line) -> `String ("Unit (Line: " ^ string_of_int line ^ ")")
+  | Val ((`Int _ | `String _ | `Bool _ as v), _) ->
+       (match v with
+        | `Int (i, (_, line)) ->`Assoc [ ("Val  (Line: " ^ string_of_int line ^ ")", `String (string_of_int i) ) ]
+        | `String (s, (_, line)) -> `Assoc [ ("Val  (Line: " ^ string_of_int line ^ ")", `String s ) ]
+        | `Bool (b, (_, line)) -> `Assoc [ ("Val  (Line: " ^ string_of_int line ^ ")", `String (string_of_bool b) ) ])
+  | Var (VarId (id, _), (_, line)) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int line ^ ")", `String id) ]
+  | Fst (e, (_, line)) ->
+      `Assoc [ ("Fst (Line: " ^ string_of_int line ^ ")", dump_local_expr e) ]
+  | Snd (e, (_, line)) ->
+      `Assoc [ ("Snd (Line: " ^ string_of_int line ^ ")", dump_local_expr e) ]
+  | Left (e, (_, line)) ->
+      `Assoc [ ("Left (Line: " ^ string_of_int line ^ ")", dump_local_expr e) ]
+  | Right (e, (_, line)) ->
+      `Assoc [ ("Right (Line: " ^ string_of_int line ^ ")", dump_local_expr e) ]
+  | Pair (e1, e2, (_, line)) ->
+      `Assoc [ ("Pair (Line: " ^ string_of_int line ^ ")", `List [ dump_local_expr e1; dump_local_expr e2 ]) ]
+  | BinOp (e1, op, e2, (_, line)) ->
       `Assoc
         [
-          ( "BinOp",
+          ( "BinOp (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("choreo_e1", dump_local_expr e1);
@@ -144,10 +147,10 @@ and dump_local_expr = function
                 ("choreo_e2", dump_local_expr e2);
               ] );
         ]
-  | Let (VarId (id, (_, id_line)), e1, e2) ->
+  | Let (VarId (id, (_, id_line)), e1, e2, (_, line)) ->
       `Assoc
         [
-          ( "Let",
+          ( "Let (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("id (Line: " ^ string_of_int id_line ^ ")", `String id);
@@ -155,10 +158,10 @@ and dump_local_expr = function
                 ("body", dump_local_expr e2);
               ] );
         ]
-  | Match (e, cases) ->
+  | Match (e, cases, (_, line)) ->
       `Assoc
         [
-          ( "Match",
+          ( "Match (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("local_expr", dump_local_expr e);
@@ -173,19 +176,19 @@ and dump_local_case (p, e) =
   `Assoc [ ("local_patt", dump_local_pattern p); ("local_expr", dump_local_expr e) ]
 
 and dump_pattern = function
-  | Default -> `String "Default"
-  | Var (VarId (id, (_, id_line))) ->
-      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
-  | Left p ->
-      `Assoc [ ("Left", dump_pattern p) ]
-  | Right p ->
-      `Assoc [ ("Right", dump_pattern p) ]
-  | Pair (p1, p2) ->
-      `Assoc [ ("Pair", `List [ dump_pattern p1; dump_pattern p2 ]) ]
-  | LocPatt (LocId (loc, (_, loc_line)), p) ->
+  | Default (_, line) -> `String ("Default (Line: " ^ string_of_int line ^ ")")
+  | Var (VarId (id, _), (_, line)) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int line ^ ")", `String id) ]
+  | Left (p, (_, line)) ->
+      `Assoc [ ("Left (Line: " ^ string_of_int line ^ ")", dump_pattern p) ]
+  | Right (p, (_, line)) ->
+      `Assoc [ ("Right (Line: " ^ string_of_int line ^ ")", dump_pattern p) ]
+  | Pair (p1, p2, (_, line)) ->
+      `Assoc [ ("Pair (Line: " ^ string_of_int line ^ ")", `List [ dump_pattern p1; dump_pattern p2 ]) ]
+  | LocPatt (LocId (loc, (_, loc_line)), p, (_,line)) ->
       `Assoc
         [
-          ( "LocPatt",
+          ( "LocPatt (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [
                 ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc); ("local_patt", dump_local_pattern p);
@@ -193,45 +196,48 @@ and dump_pattern = function
         ]
 
 and dump_local_pattern = function
-  | Default -> `String "Default"
-  | Val (`Int _ | `String _ | `Bool _ as v)  ->
-      `Assoc [ ("Val", v) ]
-  | Var (VarId (id, (_, id_line))) ->
-      `Assoc [ ("Var (Line: " ^ string_of_int id_line ^ ")", `String id) ]
-  | Left p ->
-      `Assoc [ ("Left", dump_local_pattern p) ]
-  | Right p ->
-      `Assoc [ ("Right", dump_local_pattern p) ]
-  | Pair (p1, p2) ->
+  | Default (_, line) -> `String ("Default (Line: " ^ string_of_int line ^ ")")
+  | Val ((`Int _ | `String _ | `Bool _ as v), _)   ->
+      (match v with
+      | `Int (i, (_, line)) ->`Assoc [ ("Val  (Line: " ^ string_of_int line ^ ")", `String (string_of_int i) ) ]
+      | `String (s, (_, line)) -> `Assoc [ ("Val  (Line: " ^ string_of_int line ^ ")", `String s ) ]
+      | `Bool (b, (_, line)) -> `Assoc [ ("Val  (Line: " ^ string_of_int line ^ ")", `String (string_of_bool b) ) ])
+  | Var (VarId (id, _), (_, line)) ->
+      `Assoc [ ("Var (Line: " ^ string_of_int line ^ ")", `String id) ]
+  | Left (p, (_, line)) ->
+      `Assoc [ ("Left (Line: " ^ string_of_int line ^ ")", dump_local_pattern p) ]
+  | Right (p, (_, line)) ->
+      `Assoc [ ("Right (Line: " ^ string_of_int line ^ ")", dump_local_pattern p) ]
+  | Pair (p1, p2, (_, line)) ->
       `Assoc
-        [ ("Pair", `List [ dump_local_pattern p1; dump_local_pattern p2 ]) ]
+        [ ("Pair (Line: " ^ string_of_int line ^ ")", `List [ dump_local_pattern p1; dump_local_pattern p2 ]) ]
 
 and dump_choreo_type = function
-  | TUnit -> `String "TUnit"
-  | TLoc (LocId (loc, (_, loc_line)), t) ->
+  | TUnit (_, line) -> `String ("TUnit (Line: " ^ string_of_int line ^ ")")
+  | TLoc (LocId (loc, (_, loc_line)), t, (_, line)) ->
       `Assoc
         [
-          ( "TLoc",
+          ( "TLoc (Line: " ^ string_of_int line ^ ")",
             `Assoc
               [ ("loc (Line: " ^ string_of_int loc_line ^ ")", `String loc); ("local_type", dump_local_type t) ]
           );
         ]
-  | TSend (t1, t2) ->
-      `Assoc [ ("TSend", `List [ dump_choreo_type t1; dump_choreo_type t2 ]) ]
-  | TProd (t1, t2) ->
-      `Assoc [ ("TProd", `List [ dump_choreo_type t1; dump_choreo_type t2 ]) ]
-  | TSum (t1, t2) ->
-      `Assoc [ ("TSum", `List [ dump_choreo_type t1; dump_choreo_type t2 ]) ]
+  | TSend (t1, t2, (_, line)) ->
+      `Assoc [ ("TSend (Line: " ^ string_of_int line ^ ")", `List [ dump_choreo_type t1; dump_choreo_type t2 ]) ]
+  | TProd (t1, t2, (_, line)) ->
+      `Assoc [ ("TProd (Line: " ^ string_of_int line ^ ")", `List [ dump_choreo_type t1; dump_choreo_type t2 ]) ]
+  | TSum (t1, t2, (_, line)) ->
+      `Assoc [ ("TSum (Line: " ^ string_of_int line ^ ")", `List [ dump_choreo_type t1; dump_choreo_type t2 ]) ]
 
 and dump_local_type = function
-  | TUnit -> `String "TUnit"
-  | TInt -> `String "TInt"
-  | TString -> `String "TString"
-  | TBool -> `String "TBool"
-  | TProd (t1, t2) ->
-      `Assoc [ ("TProd", `List [ dump_local_type t1; dump_local_type t2 ]) ]
-  | TSum (t1, t2) ->
-      `Assoc [ ("TSum", `List [ dump_local_type t1; dump_local_type t2 ]) ]
+  | TUnit (_, line) -> `String ("TUnit (Line: " ^ string_of_int line ^ ")")
+  | TInt (_, line) -> `String ("TInt (Line: " ^ string_of_int line ^ ")")
+  | TString (_, line) -> `String ("TString (Line: " ^ string_of_int line ^ ")")
+  | TBool (_, line) -> `String ("TBool (Line: " ^ string_of_int line ^ ")")
+  | TProd (t1, t2, (_, line)) ->
+      `Assoc [ ("TProd (Line: " ^ string_of_int line ^ ")", `List [ dump_local_type t1; dump_local_type t2 ]) ]
+  | TSum (t1, t2, (_, line)) ->
+      `Assoc [ ("TSum (Line: " ^ string_of_int line ^ ")", `List [ dump_local_type t1; dump_local_type t2 ]) ]
 
 
 (** [dump_bin_op op] returns a string representation of the binary operator [op] 

@@ -9,22 +9,22 @@
 *)
 
 %token <string * (string * int)> ID
-%token <int>    INT
-%token <string> STRING
-%token TRUE FALSE
-%token UNIT_T INT_T STRING_T BOOL_T
-%token FUN TYPE
+%token <int * (string * int)> INT
+%token <string * (string * int)> STRING
+%token <string * int> TRUE FALSE
+%token <string * int> UNIT_T INT_T STRING_T BOOL_T
+%token <string * int> FUN TYPE
 %token <string * int> PLUS MINUS TIMES DIV
 %token <string * int> AND OR
 %token <string * int> EQ NEQ LT LEQ GT GEQ
-%token LPAREN RPAREN LBRACKET RBRACKET
+%token <string * int> LPAREN RPAREN LBRACKET RBRACKET
 %token <string * int> COMMA DOT COLON SEMICOLON
-%token VERTICAL UNDERSCORE
+%token <string * int> VERTICAL UNDERSCORE
 %token COLONEQ ARROW TILDE_ARROW
-%token LET IN
-%token IF THEN ELSE
-%token FST SND LEFT RIGHT
-%token MATCH WITH
+%token <string * int> LET IN
+%token <string * int> IF THEN ELSE
+%token <string * int> FST SND LEFT RIGHT
+%token <string * int> MATCH WITH
 %token <string * int> EOF /* filename */
 
 (** Type Declarations:
@@ -84,9 +84,9 @@ decl_block:
     - Example: Parsing a pattern, a colon, a choreography type, and a semicolon results in a `Decl` node with the pattern, type, and metadata.*)
 /* TODO: Removing the need for semicolons */
 statement:
-  | pattern COLON choreo_type SEMICOLON        { Decl ($1, $3, $2) } // metainfo at $2
-  | pattern COLONEQ choreo_expr SEMICOLON      { Assign ($1, $3, $4) } // metainfo at $4
-  | TYPE var_id COLONEQ choreo_type SEMICOLON? { TypeDecl ($2, $4) }
+  | pattern COLON choreo_type SEMICOLON        { Decl ($1, $3, metainfo_of_Patt $1) } 
+  | pattern COLONEQ choreo_expr SEMICOLON      { Assign ($1, $3, metainfo_of_Patt $1) } // TODO: metainfo_of_each type
+  | TYPE var_id COLONEQ choreo_type SEMICOLON? { TypeDecl ($2, $4, $1) }
 
 (** [choreo_expr] parses choreography expressions and constructs corresponding AST nodes.
 
@@ -96,68 +96,68 @@ statement:
     - Example: Parsing an if-then-else expression results in an `If` node with the condition and branches.
 *)
 choreo_expr:
-  | IF choreo_expr THEN choreo_expr ELSE choreo_expr                             { If ($2, $4, $6) }
-  | LET decl_block IN choreo_expr                                                { Let ($2, $4) }
-  | FUN var_id ARROW choreo_expr                                                 { FunDef ($2, $4) }
-  | FST choreo_expr                                                              { Fst $2 }
-  | SND choreo_expr                                                              { Snd $2 }
-  | LEFT choreo_expr                                                             { Left $2 }
-  | RIGHT choreo_expr                                                            { Right $2 }
-  | LPAREN choreo_expr COMMA choreo_expr RPAREN                                  { Pair ($2, $4) }
-  | MATCH choreo_expr WITH nonempty_list(case)                                   { Match ($2, $4) }
-  | loc_id LBRACKET sync_label RBRACKET TILDE_ARROW loc_id SEMICOLON choreo_expr { Sync ($1, $3, $6, $8) }
-  | choreo_expr1 TILDE_ARROW loc_id DOT var_id SEMICOLON choreo_expr             { Let ([Assign (LocPatt ($3, Var $5), Send ($1, $3), $6)], $7) } // metainfo at $6
-  | choreo_expr1                                                                 { $1 }
+  | IF choreo_expr THEN choreo_expr ELSE choreo_expr                             { If ($2, $4, $6, $1) }
+  | LET decl_block IN choreo_expr                                                { Let ($2, $4, $1) }
+  | FUN var_id ARROW choreo_expr                                                 { FunDef ($2, $4, $1) }
+  | FST choreo_expr                                                              { Fst ($2, $1) }
+  | SND choreo_expr                                                              { Snd ($2, $1) }
+  | LEFT choreo_expr                                                             { Left ($2, $1) }
+  | RIGHT choreo_expr                                                            { Right ($2, $1) }
+  | LPAREN choreo_expr COMMA choreo_expr RPAREN                                  { Pair ($2, $4, $1) }
+  | MATCH choreo_expr WITH nonempty_list(case)                                   { Match ($2, $4, $1) }
+  | loc_id LBRACKET sync_label RBRACKET TILDE_ARROW loc_id SEMICOLON choreo_expr { Sync ($1, $3, $6, $8, metainfo_of_LocId $1) }
+  | choreo_expr1 TILDE_ARROW loc_id DOT var_id SEMICOLON choreo_expr             { Let ([Assign (LocPatt ($3, Var ($5, metainfo_of_ChorExpr $1), metainfo_of_ChorExpr $1), Send ($1, $3, metainfo_of_ChorExpr $1), metainfo_of_ChorExpr $1)], $7, metainfo_of_ChorExpr $1) } // may need to be revised
+  | choreo_expr1                                                                 { $1 } 
 
 choreo_expr1:
-  | choreo_expr1 TILDE_ARROW loc_id                                              { Send ($1, $3) }
+  | choreo_expr1 TILDE_ARROW loc_id                                              { Send ($1, $3, metainfo_of_ChorExpr $1) }
   | choreo_expr2                                                                 { $1 }
 
 choreo_expr2:
-  | choreo_expr2 choreo_expr3                                                    { FunApp ($1, $2) }
+  | choreo_expr2 choreo_expr3                                                    { FunApp ($1, $2, metainfo_of_ChorExpr $1) }
   | choreo_expr3                                                                 { $1 }
 
 choreo_expr3:
-  | LPAREN RPAREN                                                                { Unit }
-  | var_id                                                                       { Var $1 }
-  | loc_id DOT local_expr                                                        { LocExpr ($1, $3) }
+  | LPAREN RPAREN                                                                { Unit $1 }
+  | var_id                                                                       { Var ($1, metainfo_of_VarId $1) }
+  | loc_id DOT local_expr                                                        { LocExpr ($1, $3, metainfo_of_LocId $1) }
   | LPAREN choreo_expr RPAREN                                                    { $2 }
 
 (** [local_expr] parses local expressions and constructs corresponding AST nodes.
 
     - Returns: An AST node representing the local expression.*)
 local_expr:
-  | LPAREN RPAREN                                   { Unit }
-  | value                                           { Val $1 }                                                                    
-  | var_id                                          { Var $1 }
-  | local_expr bin_op local_expr                    { BinOp ($1, $2, $3) }
-  | LET var_id COLONEQ local_expr IN local_expr     { Let ($2, $4, $6) }
-  | LPAREN local_expr COMMA local_expr RPAREN       { Pair ($2, $4) }
-  | FST local_expr                                  { Fst $2 }
-  | SND local_expr                                  { Snd $2 }
-  | LEFT local_expr                                 { Left $2 }
-  | RIGHT local_expr                                { Right $2 }
-  | MATCH local_expr WITH nonempty_list(local_case) { Match ($2, $4) }
+  | LPAREN RPAREN                                   { Unit $1 }
+  | value                                           { Val ($1, metainfo_of_Val $1) }                                                                    
+  | var_id                                          { Var ($1, metainfo_of_VarId $1) }
+  | local_expr bin_op local_expr                    { BinOp ($1, $2, $3, metainfo_of_LocExpr $1) }
+  | LET var_id COLONEQ local_expr IN local_expr     { Let ($2, $4, $6, $1) }
+  | LPAREN local_expr COMMA local_expr RPAREN       { Pair ($2, $4, $1) }
+  | FST local_expr                                  { Fst ($2, $1) }
+  | SND local_expr                                  { Snd ($2, $1) }
+  | LEFT local_expr                                 { Left ($2, $1) }
+  | RIGHT local_expr                                { Right ($2, $1) }
+  | MATCH local_expr WITH nonempty_list(local_case) { Match ($2, $4, $1) }
   | LPAREN local_expr RPAREN                        { $2 }
 
 (** [pattern] parses patterns used in choreography expressions and constructs corresponding AST nodes.*)
 pattern:
-  | UNDERSCORE                          { Default }
-  | var_id                              { Var $1 }
-  | loc_id DOT local_pattern            { LocPatt ($1, $3) }
-  | LPAREN pattern COMMA pattern RPAREN { Pair ($2, $4) }
-  | LEFT pattern                        { Left $2 }
-  | RIGHT pattern                       { Right $2 }
+  | UNDERSCORE                          { Default $1 }
+  | var_id                              { Var ($1, metainfo_of_VarId $1) }
+  | loc_id DOT local_pattern            { LocPatt ($1, $3, metainfo_of_LocId $1) }
+  | LPAREN pattern COMMA pattern RPAREN { Pair ($2, $4, $1) }
+  | LEFT pattern                        { Left ($2, $1) }
+  | RIGHT pattern                       { Right ($2, $1) }
   | LPAREN pattern RPAREN               { $2 }
   
 (** [local_pattern] parses patterns used in local expressions within choreographies and constructs corresponding AST nodes.*)
 local_pattern:
-  | UNDERSCORE                                      { Default }
-  | value                                           { Val $1 }
-  | var_id                                          { Var $1 }
-  | LPAREN local_pattern COMMA local_pattern RPAREN { Pair ($2, $4) }
-  | LEFT local_pattern                              { Left $2 }
-  | RIGHT local_pattern                             { Right $2 }
+  | UNDERSCORE                                      { Default $1 }
+  | value                                           { Val ($1, metainfo_of_Val $1) }
+  | var_id                                          { Var ($1, metainfo_of_VarId $1) }
+  | LPAREN local_pattern COMMA local_pattern RPAREN { Pair ($2, $4, $1) }
+  | LEFT local_pattern                              { Left ($2, $1) }
+  | RIGHT local_pattern                             { Right ($2, $1) }
   | LPAREN local_pattern RPAREN                     { $2 }
 
 
@@ -166,11 +166,11 @@ local_pattern:
     - Returns: An AST node representing the choreography type.
 *)
 choreo_type:
-  | UNIT_T                        { TUnit }
-  | loc_id DOT local_type         { TLoc ($1, $3) }
-  | choreo_type ARROW choreo_type { TSend ($1, $3) }
-  | choreo_type TIMES choreo_type { TProd ($1, $3) }
-  | choreo_type PLUS choreo_type  { TSum ($1, $3) }
+  | UNIT_T                        { TUnit $1 }
+  | loc_id DOT local_type         { TLoc ($1, $3, metainfo_of_LocId $1) }
+  | choreo_type ARROW choreo_type { TSend ($1, $3, metainfo_of_ChorTyp $1) }
+  | choreo_type TIMES choreo_type { TProd ($1, $3, metainfo_of_ChorTyp $1) }
+  | choreo_type PLUS choreo_type  { TSum ($1, $3, metainfo_of_ChorTyp $1) }
   | LPAREN choreo_type RPAREN     { $2 }
 
 
@@ -180,12 +180,12 @@ choreo_type:
 *)  
 
 local_type:
-  | UNIT_T                      { TUnit }
-  | INT_T                       { TInt }
-  | STRING_T                    { TString }
-  | BOOL_T                      { TBool }
-  | local_type TIMES local_type { TProd ($1, $3) }
-  | local_type PLUS local_type  { TSum ($1, $3) }
+  | UNIT_T                      { TUnit $1 }
+  | INT_T                       { TInt $1 }
+  | STRING_T                    { TString $1 }
+  | BOOL_T                      { TBool $1 }
+  | local_type TIMES local_type { TProd ($1, $3, metainfo_of_LocTyp $1) }
+  | local_type PLUS local_type  { TSum ($1, $3, metainfo_of_LocTyp $1 ) }
   | LPAREN local_type RPAREN    { $2 }
   
 (** [loc_id] parses an identifier for a location and constructs a corresponding AST node.
@@ -209,10 +209,10 @@ sync_label:
 
 
 value:
-  | INT    { `Int $1 }
-  | STRING { `String $1 }
-  | TRUE   { `Bool true }
-  | FALSE  { `Bool false }
+  | INT    { let (i, metainfo) = $1 in `Int (i, metainfo) }
+  | STRING { let (s, metainfo) = $1 in `String (s, metainfo) }
+  | TRUE   { `Bool (true, $1) }
+  | FALSE  { `Bool (false, $1) }
 
 (** [case] parses case expressions for choreography expressions and constructs corresponding AST nodes.
 
