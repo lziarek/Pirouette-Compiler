@@ -1,9 +1,10 @@
 open OUnit2
+open Ast.Interface
 open Parsing.Interface
 
 let peq (s : string) (expected_dot : string) =
   let stmts = parse_program (Lexing.from_string s) in
-  let generated_dot = Pirouettedot.Interface.generate_dot_code stmts in
+  let generated_dot = dot_graph stmts in
   (generated_dot, expected_dot)
 
 (* let test_declaration_basic _ =

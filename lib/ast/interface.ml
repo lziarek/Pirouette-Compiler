@@ -1,5 +1,8 @@
 open Choreo
 open Yojson.Basic
+open Choreo_dot
+
+let dot_graph prog = generate_dot_code prog
 
 let rec dump_choreo_ast prog = dump_program prog |> pretty_to_string
 
