@@ -26,6 +26,14 @@ open Choreo
 open Format
 open Local_pp
 
+(** [pp_ast] prints the list of statements in format, then a new line when finished
+    
+    - [fmt] is Format.formatter
+    - [stmts] is a Choreo AST of type Choreo.Prog
+    - Calls helper function [pp_stmts] to pretty print the Choreo AST
+    - Calls a formatter function [pp_print_newline] to print all pending items in the pretty-printer queue, 
+      flush the output device, and add a new line.
+*)
 let rec pp_ast fmt (Prog stmts) = 
   pp_stmts fmt stmts;
   pp_print_newline fmt ()
@@ -40,6 +48,14 @@ let rec pp_ast fmt (Prog stmts) =
   if the list is empty, do nothing
   else print the first statement and call pp_stmts recursively on the rest of the list
 *)
+(** [pp_stmts] uses pattern matching to print each statements in the list
+  
+    - if the list is empty, do nothing
+    - else, print the first statement and call pp_stmts recursively on the rest of the list
+    - [fmt] is Format.formatter
+    - [stmts] is a list of statements of type Choreo.decl_block
+    - Calls helper function [pp_stmt] on each statement in [stmts] to pretty print
+*)
 and pp_stmts fmt stmts = 
   match stmts with
   | [] -> ()
@@ -48,6 +64,11 @@ and pp_stmts fmt stmts =
     if stmts <> [] then fprintf fmt "\n";
     pp_stmts fmt stmts
 
+(** [pp_stmt] takes a formatter [fmt] and a statement [statement] and prints the formatted code of the statement
+  
+    - Variants of statements include Decl, Assign, TypeDecl
+    - Calls helper functions [pp_choreo_pattern], [pp_choreo_typ], [pp_choreo_expr] to pretty print the statement
+*)
 and pp_stmt fmt statement =
   match statement with
   | Decl (patn, typ) ->
@@ -57,6 +78,12 @@ and pp_stmt fmt statement =
   | TypeDecl (VarId id, typ) ->
       fprintf fmt "type %s := %a;\n" id pp_choreo_typ typ
 
+(** [pp_choreo_pattern] takes a formatter [fmt] and a choreo pattern [patn] and prints the formatted code of the choreo pattern
+
+    - Variants of patterns include Default, LocPatt, Var, Left, Right, and Pair
+    - For variant [LocPatt], it calls helper function [pp_local_pattern] to pretty print the local pattern
+    - For variants [Pair], [Left], and [Right], it calls helper function [pp_choreo_pattern] to pretty print the choreo pattern
+*)
 and pp_choreo_pattern fmt patn =
   match patn with
   | Default -> fprintf fmt "_"
@@ -67,6 +94,12 @@ and pp_choreo_pattern fmt patn =
   | Pair (patn1, patn2) ->
       fprintf fmt "(%a, %a)" pp_choreo_pattern patn1 pp_choreo_pattern patn2
 
+(** [pp_choreo_typ] takes a formatter [fmt] and a choreo type [choreo_typ] and prints the formatted code of the choreo type
+
+    - Variants of choreo types include TUnit, TLoc, TSend, TProd, and TSum
+    - For variant [TLoc], it calls helper function [pp_local_typ] to pretty print the local type
+    - For variants [TSend], [TProd], and [TSum], it calls helper function [pp_choreo_typ] to pretty print the choreo type
+*)
 and pp_choreo_typ fmt choreo_typ =
   match choreo_typ with
   | TUnit -> fprintf fmt "unit"
@@ -78,7 +111,14 @@ and pp_choreo_typ fmt choreo_typ =
   | TSum (typ1, typ2) ->
         fprintf fmt "%a + %a" pp_choreo_typ typ1 pp_choreo_typ typ2
 
+(** [pp_choreo_expr] takes a formatter [fmt] and a choreo expression [expr] and prints the formatted code of the choreo expression
 
+    - Variants of choreo expressions include Unit, Var, LocExpr, Send, Sync, If, Let, FunDef, FunApp,
+      Pair, Fst, Snd, Left, Right, and Match
+    - For variant [LocExpr], it calls helper function [pp_local_expr] to pretty print the local expression
+    - For variant [Let], it calls helper function [pp_stmts] to pretty print the declaration block 
+    - For variant [Match], it calls helper function [pp_choreo_cases] to pretty print the choreo cases
+*)
 and pp_choreo_expr fmt expr =
   match expr with
   | Unit -> fprintf fmt "()"
@@ -103,6 +143,13 @@ and pp_choreo_expr fmt expr =
   | Match (e, cases) ->
       fprintf fmt "@[<hov>match %a with@]@;@[<2>%a@]" pp_choreo_expr e pp_choreo_cases cases
 
+(** [pp_choreo_cases] takes a formatter [fmt] and a list of cases [case_list] and prints the formatted code of the choreo cases
+
+    - A case is a tuple of a choreo pattern and a choreo expression, [(patn, expr)]
+    - if the list is empty, do nothing
+    - else, print the first case and call [pp_choreo_cases] recursively on the rest of the list
+    - Calls helper function [pp_choreo_case] on each case in the list to pretty print
+*)
 and pp_choreo_cases fmt case_list = 
   match case_list with
   | [] -> ()
@@ -110,5 +157,10 @@ and pp_choreo_cases fmt case_list =
     pp_choreo_case fmt case;
     pp_choreo_cases fmt cases
 
+(** [pp_choreo_case] takes a formatter [fmt] and a tuple of a choreo case [(patn, expr)] and prints the formatted code of the choreo case
+
+    - Calls [pp_choreo_pattern] to pretty print the choreo pattern
+    - Calls [pp_choreo_expr] to pretty print the choreo expression
+*)
 and pp_choreo_case fmt (patn, expr) =
   fprintf fmt "| %a -> %a\n" pp_choreo_pattern patn pp_choreo_expr expr
