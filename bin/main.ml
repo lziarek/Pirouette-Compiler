@@ -1,5 +1,5 @@
+open Ast.Interface
 open Parsing.Interface
-open Pirouettedot.Interface
 
 let dot_to_file filename dot_code =
   let file_oc = open_out filename in
@@ -16,6 +16,6 @@ let () =
     let lexbuf = Lexing.from_channel file_ic in
     let program = parse_program lexbuf in
     close_in file_ic;
-    let dot_code = generate_dot_code program in
+    let dot_code = dot_graph program in
     let out_filename = Sys.argv.(2) ^ ".dot" in
     dot_to_file out_filename dot_code
