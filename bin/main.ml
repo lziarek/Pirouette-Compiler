@@ -33,19 +33,18 @@ let () =
   (* print_endline (dump_choreo_ast program); *)
 
   if !outfile_name <> "" then (
-    (*if !prettyprint_flag then (
+    if !prettyprint_flag then (
       let file_oc = open_out (!outfile_name (*^ ".extension"*)) in
         pretty_print (Format.formatter_of_out_channel file_oc) program;
-        close_out file_oc); *)
+        close_out file_oc);
     if !dot_flag then (
       let dot_code = dot_graph program in
       dot_to_file !outfile_name dot_code
       );
     (* if !metainfo_flag then print_metainfo program to out_file *)
   ) else (
-    (*if !prettyprint_flag then pretty_print Format.std_formatter program; *)
+    if !prettyprint_flag then pretty_print Format.std_formatter program;
     if !dot_flag then (print_endline (dot_graph program))
     (* if !metainfo_flag then print_metainfo program to terminal *)
   );
   close_in file_ic;
-  
