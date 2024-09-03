@@ -1,0 +1,1 @@
+type x := P1.int

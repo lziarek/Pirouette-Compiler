@@ -1,0 +1,1 @@
+y := fst(P1."Hello", P1."World"); z := snd(P1.1, P1.2);

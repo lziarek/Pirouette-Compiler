@@ -1,1 +1,1 @@
-y := fst(P1."Hello", P1."World");
+P.(3) : P.(int + int);  P.(3,true) : P.(int * bool);
