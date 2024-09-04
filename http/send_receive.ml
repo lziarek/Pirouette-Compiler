@@ -3,6 +3,7 @@ open Async
 
 (** [send_message connection message] sends [message] over the given [connection].
     The message is sent as a POST request to the root path of the server.
+    Returns: A Deferred.t that resolves when the message has been sent.
     Requires: [connection] is an open H2 connection. *)
 let send_message connection message =
   let request = 
@@ -23,8 +24,8 @@ let send_message connection message =
 
 (** [receive_message connection] receives a message from the given [connection].
     The message is received as a GET request to the root path of the server.
-    Returns: A promise that resolves to the received message as a string.
-    If an error occurs, the promise resolves to an error message.
+    Returns: A Deferred.t that resolves to the received message as a string.
+    If an error occurs, the Deferred.t resolves to an error message.
     Requires: [connection] is an open H2 connection. *)
 let receive_message connection =
   let response_received = Ivar.create () in
