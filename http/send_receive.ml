@@ -1,6 +1,8 @@
 open H2
 
-(* Send function *)
+(** [send_message connection message] sends [message] over the given [connection].
+    The message is sent as a POST request to the root path of the server.
+    Requires: [connection] is an open H2 connection. *)
 let send_message connection message =
   let request = 
     Request.create
@@ -17,7 +19,11 @@ let send_message connection message =
   Body.Writer.write_string request_body message;
   Body.Writer.close request_body
 
-(* Receive function *)
+(** [receive_message connection] receives a message from the given [connection].
+    The message is received as a GET request to the root path of the server.
+    Returns: A promise that resolves to the received message as a string.
+    If an error occurs, the promise resolves to an error message.
+    Requires: [connection] is an open H2 connection. *)
 let receive_message connection =
   let response_received, notify_response_received = Promise.create () in
   let response_handler response response_body =
