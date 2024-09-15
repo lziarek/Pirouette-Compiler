@@ -1,0 +1,9 @@
+(library
+ (name http)
+ (modules Send_receive)
+ (libraries cohttp cohttp-lwt-unix lwt))
+
+ (executable
+ (name mock_server)
+ (modules mock_server)
+ (libraries cohttp cohttp-lwt-unix lwt))
