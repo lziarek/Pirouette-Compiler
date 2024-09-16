@@ -1,3 +1,4 @@
 (library
  (name ast_utils)
- (libraries ast yojson))
+ (libraries ast yojson)
+ (instrumentation (backend bisect_ppx)))
