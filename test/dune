@@ -11,4 +11,4 @@
 (test
  (name marshal_test)
  (modules marshal_test)
- (libraries ounit2 http))
+ (libraries ounit2 http types))
