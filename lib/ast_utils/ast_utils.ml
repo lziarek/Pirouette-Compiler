@@ -21,3 +21,11 @@ let pprint_net_ast channel (Ast.Net.Prog prog) =
   Pprint_ast.pprint_net_stmt_block ppf prog;
   Format.pp_print_newline ppf ()
 ;;
+let dot_graph (prog : Ast.Choreo.program) : string =
+  Choreo_dot.generate_dot_code prog
+
+let dot_choreo_ast channel (Ast.Choreo.Prog prog) =
+  let dot_code = dot_graph (Ast.Choreo.Prog prog) in
+  output_string channel dot_code;
+  flush channel
+;;
