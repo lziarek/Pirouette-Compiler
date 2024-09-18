@@ -8,7 +8,7 @@ open Local_dot
     - Resets the node counter to 0 so that the next call to [generate_node_name] will start from 0.
     - Returns: A string that represents the dot code for the choreo program [program].
 *)
-let rec generate_dot_code (Prog program) =
+let rec generate_dot_code (Prog (program, _)) =
   let (code,_) = dot_stmts program in
   node_counter := 0;
   Printf.sprintf "digraph G {\n%s\n}\n" code
@@ -42,14 +42,14 @@ and dot_stmts (stmts : stmt list) : string * string =
 and dot_stmt statement = 
   let node_name = generate_node_name () in 
   match statement with 
-  | Decl (patn, typ) -> 
+  | Decl (patn, typ, (_, line)) -> 
       let (c1, n1) = dot_pattern patn in 
       let (c2, n2) = dot_choreo_type typ in 
-      let decl_node = Printf.sprintf "%s [label=\"Decl\"];\n" node_name in
+      let decl_node = Printf.sprintf "%s [label=\"Decl\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (decl_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | Assign (patn_list, expr) ->
+  | Assign (patn_list, expr, (_, line)) ->
     let rec pattern_loop patterns = 
         match patterns with
         | [] -> ("", "")
@@ -61,11 +61,11 @@ and dot_stmt statement =
       in
       let (pattern_code, pattern_edge) = pattern_loop patn_list in
       let (c1, n1) = dot_choreo_expr expr in
-      let assign_node = Printf.sprintf "%s [label=\"Assign\"];\n" node_name in
+      let assign_node = Printf.sprintf "%s [label=\"Assign\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       (assign_node ^ pattern_edge ^ edge1 ^ pattern_code ^ c1, node_name)
-  | TypeDecl (TypId id, typ) ->
-      let var_node = Printf.sprintf "%s [label=\"%s\"];\n" node_name id in 
+  | TypeDecl (TypId (id, _), typ, (_, line)) ->
+      let var_node = Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name id line in 
       let (c, n) = dot_choreo_type typ in 
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (var_node ^ edge ^ c, node_name)
@@ -83,28 +83,28 @@ and dot_stmt statement =
 and dot_pattern (patn : pattern) : string * string  = 
   let node_name = generate_node_name () in 
   match patn with 
-  | Default -> Printf.sprintf "%s [label=\"Default\"];\n" node_name, node_name
-  | Var (VarId id) -> Printf.sprintf "%s [label=\"%s\"];\n" node_name id, node_name
-  | Pair (patn1, patn2) ->
+  | Default (_, line) -> Printf.sprintf "%s [label=\"Default\\nLine: %d\"];\n" node_name line, node_name
+  | Var (VarId (id, _), (_, line)) -> Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name id line, node_name
+  | Pair (patn1, patn2, (_, line)) ->
       let (c1, n1) = dot_pattern patn1 in
       let (c2, n2) = dot_pattern patn2 in
-      let pair_node = Printf.sprintf "%s [label=\"Pair\"];\n" node_name in
+      let pair_node = Printf.sprintf "%s [label=\"Pair\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (pair_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | LocPatt (LocId loc, lp) -> 
-      let locid_node = Printf.sprintf "%s [label=\"%s\"];\n" node_name loc in 
+  | LocPatt (LocId (loc, _), lp, (_, line)) -> 
+      let locid_node = Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name loc line in 
       let (c, n) = dot_local_pattern lp in 
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (locid_node ^ edge ^ c, node_name)
-  | Left patn ->
+  | Left (patn, (_, line)) ->
       let (c, n) = dot_pattern patn in
-      let left_node = Printf.sprintf "%s [label=\"Left\"];\n" node_name in
+      let left_node = Printf.sprintf "%s [label=\"Left\\nLine: %d\"];\n" node_name line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (left_node ^ edge ^ c, node_name)
-  | Right patn ->
+  | Right (patn, (_, line)) ->
       let (c, n) = dot_pattern patn in
-      let right_node = Printf.sprintf "%s [label=\"Right\"];\n" node_name in
+      let right_node = Printf.sprintf "%s [label=\"Right\\nLine: %d\"];\n" node_name line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (right_node ^ edge ^ c, node_name)
 
@@ -121,35 +121,35 @@ and dot_pattern (patn : pattern) : string * string  =
 and dot_choreo_type typ = 
   let node_name = generate_node_name () in 
   match typ with 
-  | TUnit -> Printf.sprintf "%s [label=\"()\"];\n" node_name, node_name
-  | TLoc (LocId id, typ) ->
-      let locid_node = Printf.sprintf "%s [label=\"%s\"];\n" node_name id in
+  | TUnit (_, line) -> Printf.sprintf "%s [label=\"()\\nLine: %d\"];\n" node_name line, node_name
+  | TLoc (LocId (id, _), typ, (_, line)) ->
+      let locid_node = Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name id line in
       let (c, n) = dot_local_type typ in 
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (locid_node ^ edge ^ c, node_name)
-  | TMap (typ1, typ2) ->
+  | TMap (typ1, typ2, (_, line)) ->
       let (c1, n1) = dot_choreo_type typ1 in 
       let (c2, n2) = dot_choreo_type typ2 in 
-      let send_node = Printf.sprintf "%s [label=\"Send\"];\n" node_name in
+      let send_node = Printf.sprintf "%s [label=\"Send\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (send_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | TProd (typ1, typ2) ->
+  | TProd (typ1, typ2, (_, line)) ->
       let (c1, n1) = dot_choreo_type typ1 in
       let (c2, n2) = dot_choreo_type typ2 in
-      let prod_node = Printf.sprintf "%s [label=\"Product\"];\n" node_name in
+      let prod_node = Printf.sprintf "%s [label=\"Product\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (prod_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | TSum (typ1, typ2) ->
+  | TSum (typ1, typ2, (_, line)) ->
       let (c1, n1) = dot_choreo_type typ1 in
       let (c2, n2) = dot_choreo_type typ2 in
-      let sum_node = Printf.sprintf "%s [label=\"Sum\"];\n" node_name in
+      let sum_node = Printf.sprintf "%s [label=\"Sum\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (sum_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | TAlias (TypId id, typ) ->
-      let typid_node = Printf.sprintf "%s [label=\"%s\"];\n" node_name id in
+  | TAlias (TypId (id, _), typ, (_, line)) ->
+      let typid_node = Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name id line in
       let (c, n) = dot_choreo_type typ in 
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (typid_node ^ edge ^ c, node_name)   
@@ -167,43 +167,43 @@ and dot_choreo_type typ =
 and dot_choreo_expr chor_expr = 
   let node_name = generate_node_name () in 
   match chor_expr with 
-  | Unit -> Printf.sprintf "%s [label=\"()\"];\n" node_name, node_name
-  | Var (VarId id) ->
-      Printf.sprintf "%s [label=\"%s\"];\n" node_name id, node_name
-  | LocExpr (LocId id, le) ->
-      let locid_node = Printf.sprintf "%s [label=\"%s\"];\n" node_name id in
+  | Unit (_, line) -> Printf.sprintf "%s [label=\"()\\nLine: %d\"];\n" node_name line, node_name
+  | Var (VarId (id, _), (_, line)) ->
+      Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name id line, node_name
+  | LocExpr (LocId (id, _), le, (_, line)) ->
+      let locid_node = Printf.sprintf "%s [label=\"%s\\nLine: %d\"];\n" node_name id line in
       let (c, n) = dot_local_expr le in 
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (locid_node ^ edge ^ c, node_name)
-  | Send (LocId id1, expr, LocId id2) ->
-      let send_node1 = Printf.sprintf "%s [label=\"Send from: %s\"];\n" node_name id1 in
+  | Send (LocId (id1, _), expr, LocId (id2, _), (_, line)) ->
+      let send_node1 = Printf.sprintf "%s [label=\"Send from: %s\\nLine: %d\"];\n" node_name id1 line in
       let (c, n) = dot_choreo_expr expr in 
-      let send_node2 = Printf.sprintf "%s [label=\"Send to: %s\"];\n" node_name id2 in
+      let send_node2 = Printf.sprintf "%s [label=\"Send to: %s\\nLine: %d\"];\n" node_name id2 line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (send_node1 ^ send_node2 ^ edge ^ c, node_name)
-  | Sync (LocId loc_id1, LabelId label, LocId loc_id2, expr) ->
+  | Sync (LocId (loc_id1, _), LabelId (label, _), LocId (loc_id2, _), expr, (_, line)) ->
       let (c, n) = dot_choreo_expr expr in
       let sync_node =
-        Printf.sprintf "%s [label=\"Sync: %s[%s] -> %s\"];\n" node_name loc_id1 label loc_id2 in
+        Printf.sprintf "%s [label=\"Sync: %s[%s] -> %s\\nLine: %d\"];\n" node_name loc_id1 label loc_id2 line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (sync_node ^ edge ^ c, node_name)
-  | If (cond, then_expr, else_expr) ->
+  | If (cond, then_expr, else_expr, (_, line)) ->
       let (c1, n1) = dot_choreo_expr cond in 
       let (c2, n2) = dot_choreo_expr then_expr in 
       let (c3, n3) = dot_choreo_expr else_expr in 
-      let if_node = Printf.sprintf "%s [label=\"If\"];\n" node_name in
+      let if_node = Printf.sprintf "%s [label=\"If\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       let edge3 = Printf.sprintf "%s -> %s;\n" node_name n3 in
       (if_node ^ edge1 ^ edge2 ^ edge3 ^ c1 ^ c2 ^ c3, node_name)
-  | Let (decl_block, expr) ->
+  | Let (decl_block, expr, (_, line)) ->
       let (c1, n1) = dot_stmts decl_block in 
       let (c2, n2) = dot_choreo_expr expr in 
-      let let_node = Printf.sprintf "%s [label=\"Let\"];\n" node_name in
+      let let_node = Printf.sprintf "%s [label=\"Let\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (let_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | FunDef (patn_list, expr) ->
+  | FunDef (patn_list, expr, (_, line)) ->
       let rec pattern_loop patterns = 
           match patterns with
           | [] -> ("", "")
@@ -215,46 +215,46 @@ and dot_choreo_expr chor_expr =
       in
       let (pattern_code, pattern_edge) = pattern_loop patn_list in
       let (c1, n1) = dot_choreo_expr expr in
-      let fundef_node = Printf.sprintf "%s [label=\"FunDef\"];\n" node_name in
+      let fundef_node = Printf.sprintf "%s [label=\"FunDef\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
     (fundef_node ^ pattern_edge ^ edge1 ^ pattern_code ^ c1, node_name)
-  | FunApp (f, arg) ->
+  | FunApp (f, arg, (_, line)) ->
       let (c1, n1) = dot_choreo_expr f in 
       let (c2, n2) = dot_choreo_expr arg in 
-      let funapp_node = Printf.sprintf "%s [label=\"FunApp\"];\n" node_name in
+      let funapp_node = Printf.sprintf "%s [label=\"FunApp\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (funapp_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | Pair (e1, e2) ->
+  | Pair (e1, e2, (_, line)) ->
       let (c1, n1) = dot_choreo_expr e1 in
       let (c2, n2) = dot_choreo_expr e2 in
-      let pair_node = Printf.sprintf "%s [label=\"Pair\"];\n" node_name in
+      let pair_node = Printf.sprintf "%s [label=\"Pair\\nLine: %d\"];\n" node_name line in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in
       (pair_node ^ edge1 ^ edge2 ^ c1 ^ c2, node_name)
-  | Fst e ->
+  | Fst (e, (_, line)) ->
       let (c, n) = dot_choreo_expr e in
-      let fst_node = Printf.sprintf "%s [label=\"Fst\"];\n" node_name in
+      let fst_node = Printf.sprintf "%s [label=\"Fst\\nLine: %d\"];\n" node_name line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (fst_node ^ edge ^ c, node_name)
-  | Snd e ->
+  | Snd (e, (_, line)) ->
       let (c, n) = dot_choreo_expr e in
-      let snd_node = Printf.sprintf "%s [label=\"Snd\"];\n" node_name in
+      let snd_node = Printf.sprintf "%s [label=\"Snd\\nLine: %d\"];\n" node_name line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (snd_node ^ edge ^ c, node_name)
-  | Left e ->
+  | Left (e, (_, line)) ->
       let (c, n) = dot_choreo_expr e in
-      let left_node = Printf.sprintf "%s [label=\"Left\"];\n" node_name in
+      let left_node = Printf.sprintf "%s [label=\"Left\\nLine: %d\"];\n" node_name line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (left_node ^ edge ^ c, node_name)
-  | Right e ->
+  | Right (e, (_, line)) ->
       let (c, n) = dot_choreo_expr e in
-      let right_node = Printf.sprintf "%s [label=\"Right\"];\n" node_name in
+      let right_node = Printf.sprintf "%s [label=\"Right\\nLine: %d\"];\n" node_name line in
       let edge = Printf.sprintf "%s -> %s;\n" node_name n in
       (right_node ^ edge ^ c, node_name)
-  | Match (e, cases) ->
+  | Match (e, cases, (_, line)) ->
       let (c1, n1) = dot_choreo_expr e in
-      let match_node = Printf.sprintf "%s [label=\"Match\"];\n" node_name in
+      let match_node = Printf.sprintf "%s [label=\"Match\\nLine: %d\"];\n" node_name line in
       let (c2, n2) = dot_choreo_cases cases in
       let edge1 = Printf.sprintf "%s -> %s;\n" node_name n1 in
       let edge2 = Printf.sprintf "%s -> %s;\n" node_name n2 in

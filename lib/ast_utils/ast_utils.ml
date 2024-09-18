@@ -24,8 +24,8 @@ let pprint_net_ast channel (Ast.Net.Prog prog) =
 let dot_graph (prog : Ast.Choreo.program) : string =
   Choreo_dot.generate_dot_code prog
 
-let dot_choreo_ast channel (Ast.Choreo.Prog prog) =
-  let dot_code = dot_graph (Ast.Choreo.Prog prog) in
+let dot_choreo_ast channel (Ast.Choreo.Prog (prog, metainfo)) =
+  let dot_code = dot_graph (Ast.Choreo.Prog (prog, metainfo)) in
   output_string channel dot_code;
   flush channel
 ;;
