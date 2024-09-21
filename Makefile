@@ -1,12 +1,12 @@
 FILE := $(word 2, $(MAKECMDGOALS))
 LATEX_DOCS := $(wildcard docs/*.tex)
 
-.PHONY: all build docs pp json dot test-pp bisect-pp clean cleandoc cleanall
+.PHONY: build docs pp json dot test-pp bisect-pp clean cleandoc cleanall
 
 build:
 	dune build
 
-doc: 
+docs: 
 	for file in $(LATEX_DOCS); do \
 		pdflatex -output-directory=docs $$file; \
 	done
@@ -25,7 +25,7 @@ test-pp: cleanall
 
 bisect-pp: cleanall
 	dune exec --instrument-with bisect_ppx test/prettyprint_test.exe
-	bisect-ppx-report html --theme=dark
+	bisect-ppx-report html
 
 clean:
 	dune clean
@@ -34,7 +34,7 @@ cleandoc:
 	rm -rf docs/*.aux docs/*.log docs/*.out
 
 cleanall: clean cleandoc
-	rm -rf _build _coverage bisect*.coverage examples/*.json examples/*.ast examples/*.dot docs/*.pdf
+	rm -rf _build _coverage bisect*.coverage docs/*.pdf
 
 %:
 	@:
