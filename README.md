@@ -17,17 +17,32 @@ cd examples
 dune exec pirc <file>
 ```
 
-Then `pirc` will parse the file and dump the ASTs to the current directory (in pretty-printed format by default).
+Then `pirc` will parse the file and dump the ASTs to the current terminal (in pretty-printed format by default).
 
 ## Options
 
-- `-ast-dump <pprint|json>`: Dump the AST in pretty-printed or JSON format.
+- `-<pprint|json|dot>`: Dump the AST in pretty-printed or JSON format, or generate a [DOT](https://graphviz.org/doc/info/lang.html) file for AST visualization.
 
 - use `-` to read the source code from `stdin`. E.g.:
 
 ```sh
 cat examples/1.pir | dune exec pirc -- -
 ```
+
+- use `-o <file>` to write the output to a file. E.g.:
+
+```sh
+dune exec pirc -- -json examples/1.pir -o out
+```
+
+## Documentation
+
+```sh
+make docs
+```
+
+Then open pdf files in `docs` directory.
+
 ## Contribute
 
 - [Git Guides](https://github.com/git-guides)
