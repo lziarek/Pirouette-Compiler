@@ -1,6 +1,8 @@
 open OUnit2
 open Http.Send_receive
-open Types
+open Types_test
+
+
 
 let test_marshal_unmarshal_int _ =
   let data = 10 in
@@ -40,8 +42,8 @@ let test_marshal_unmarshal_color _ =
 
 let test_marshal_unmarshal_person _ =
   let data = {
-    name = "Alice";
-    age = 30;
+    name = "Ethan";
+    age = 20;
     favorite_colors = [Green; Blue];
   } in
   let marshaled = marshal_data data in

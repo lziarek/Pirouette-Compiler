@@ -6,9 +6,9 @@
 (test
  (name send_receive_test)
  (modules send_receive_test)
- (libraries ounit2 http cohttp-lwt-unix lwt))
+ (libraries ounit2 http cohttp-lwt-unix logs))
 
 (test
  (name marshal_test)
- (modules marshal_test)
- (libraries ounit2 http types))
+ (modules marshal_test types_test)
+ (libraries ounit2 http))

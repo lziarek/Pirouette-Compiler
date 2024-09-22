@@ -1,4 +1,4 @@
-(* Reads a config file and return a (host, port) tuple *)
+(* 
 let read_config filename =
   let ic = open_in filename in
   let rec read_lines () =
@@ -23,4 +23,4 @@ let read_config filename =
 (* Prints config information to console*)
 let () =
   let (host, port) = read_config "http.config" in
-  Printf.printf "Host: %s, Port: %d\n" host port
+  Printf.printf "Host: %s, Port: %d\n" host port *)

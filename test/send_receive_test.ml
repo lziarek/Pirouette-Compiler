@@ -3,10 +3,16 @@ open Lwt.Infix
 open Http
 
 
+let setup_logs () =
+  Logs.set_reporter (Logs_fmt.reporter ());
+  Logs.set_level (Some Logs.Debug);
+  Lwt.return_unit
+
 let test_send_message _ =
   let url = "http://localhost:8080/send" in
   let data = "Test data" in
   Lwt_main.run (
+    setup_logs () >>= fun () ->
     Send_receive.send_message ~url ~data >>= function
     | Ok () -> Lwt.return (assert_bool "Message sent successfully" true)
     | Error msg -> Lwt.return (assert_failure msg)
@@ -15,6 +21,7 @@ let test_send_message _ =
 let test_receive_message _ =
   let url = "http://localhost:8080/receive" in
   Lwt_main.run (
+    setup_logs () >>= fun () ->
     Send_receive.receive_message ~url >>= function
     | Ok received_data ->
         let expected_data = "Received data" in
