@@ -251,7 +251,7 @@
 { \Gamma;\Delta \vdash \ell_1[d] \leadsto \ell_2 ; C : \tau} \and
 \inferrule [ if ]
 { \Gamma;\Delta \vdash C_1 : \ell.bool \quad \Gamma;\Delta\vdash C_2 : \tau_2 \quad \Gamma;\Delta \vdash C_3 : \tau_2 }
-{ \Gamma;\Delta \vdash \textsf{if } C_1 \textsf{ then } C_2 \textsf{ else } C_3: T_2  } \and
+{ \Gamma;\Delta \vdash \textsf{if } C_1 \textsf{ then } C_2 \textsf{ else } C_3: \tau_2  } \and
 \inferrule [ def ]
 { \Gamma;\Delta \vdash C_1 : \ell.t \quad \Gamma;\Delta, X : \ell.t \vdash C_2 : \tau_2 }
 { \Gamma;\Delta \vdash \textsf{let } X = C_1 \textsf{ in } C_2 : \tau_2 } \and

@@ -1,0 +1,64 @@
+name: Pirouette CI
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+  pull_request:
+    types: [opened, synchronize, closed]
+    branches:
+      - 'main'
+    paths-ignore:
+      - '.githooks/**'
+      - '**/LICENSE'
+      - '**/*.md'
+
+  push:
+    branches:
+      - 'main'
+    paths-ignore:
+      - '.githooks/**'
+      - '**/LICENSE'
+      - '**/*.md'
+
+permissions: read-all
+
+jobs:
+  lint-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+
+      - name: Lint and format
+        uses: ocaml/setup-ocaml/lint-fmt@v3
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+
+      - name: Install dependencies
+        run: opam install . --deps-only --with-test
+
+      - name: Build
+        run: opam exec -- dune build
