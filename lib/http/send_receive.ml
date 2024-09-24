@@ -8,7 +8,10 @@ let marshal_data data =
 
 (* Function to unmarshal data *)
 let unmarshal_data data_str =
-  Marshal.from_string data_str 0
+  try
+    Ok (Marshal.from_string data_str 0)
+  with
+  | Failure msg -> Error ("Unmarshal error: " ^ msg)
 
 (* Function to send a message *)
 let send_message ~url ~data =
@@ -29,7 +32,9 @@ let receive_message ~url =
   let status = resp |> Response.status |> Code.code_of_status in
   if status = 200 then
     body |> Cohttp_lwt.Body.to_string >|= fun body_str ->
-    Ok (unmarshal_data body_str)
+    match unmarshal_data body_str with
+    | Ok data -> Ok data
+    | Error msg -> Error msg
   else
     Cohttp_lwt.Body.drain_body body >>= fun () ->
     Lwt.return_error ("Failed to receive message, status code: " ^ string_of_int status)
