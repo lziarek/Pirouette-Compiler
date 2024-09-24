@@ -12,6 +12,7 @@ let receive_and_unmarshal url expected_data =
   Send_receive.receive_message ~url >>= function
   | Ok unmarshaled ->
       Logs.debug (fun m -> m "Unmarshaled data: %s" (Marshal.to_string unmarshaled []));
+      Logs.debug (fun m -> m "Expected data: %s" (Marshal.to_string expected_data [])); 
       assert_equal expected_data unmarshaled;
       Lwt.return_unit
   | Error msg -> Lwt.return (assert_failure msg)

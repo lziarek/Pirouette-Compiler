@@ -1,7 +1,7 @@
 open OUnit2
 open Lwt.Infix
 open Http
-open Types_test  (* Ensure access to color and person types *)
+open Types_test
 
 let setup_logs () =
   Logs.set_reporter (Logs_fmt.reporter ());
