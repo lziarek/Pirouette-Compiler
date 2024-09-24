@@ -4,7 +4,6 @@ open Lwt.Infix
 
 let sent_data = ref []
 
-
 let server =
   let callback _conn req body =
     let uri = req |> Request.uri |> Uri.path in

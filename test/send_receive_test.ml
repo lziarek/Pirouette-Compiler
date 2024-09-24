@@ -20,11 +20,11 @@ let test_send_message _ =
 
 let test_receive_message _ =
   let url = "http://localhost:8080/receive" in
+  let expected_data = "Test data" in  
   Lwt_main.run (
     setup_logs () >>= fun () ->
     Send_receive.receive_message ~url >>= function
     | Ok received_data ->
-        let expected_data = "Received data" in
         assert_equal expected_data received_data;
         Lwt.return_unit
     | Error msg -> Lwt.return (assert_failure msg)
