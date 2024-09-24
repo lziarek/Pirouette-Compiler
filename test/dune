@@ -10,5 +10,19 @@
 
 (test
  (name marshal_test)
- (modules marshal_test types_test)
- (libraries ounit2 http))
+ (modules marshal_test)
+ (libraries ounit2 http types_test))
+
+(library
+ (name types_test)
+ (modules types_test))
+
+(executable
+ (name marshal_sender)
+ (modules marshal_sender)
+ (libraries ounit2 http cohttp-lwt-unix logs types_test))
+
+(executable
+ (name marshal_receiver)
+ (modules marshal_receiver)
+ (libraries ounit2 http cohttp-lwt-unix logs types_test))
