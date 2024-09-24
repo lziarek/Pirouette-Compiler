@@ -20,11 +20,6 @@ let speclist =
   ]
 ;;
 
-let dot_to_file outfile_name dot_code =
-  let file_oc = open_out (outfile_name ^ ".dot") in
-  Printf.fprintf file_oc "%s" dot_code;
-  close_out file_oc
-
 let () =
   Arg.parse speclist open_file_ic usage_msg;
   if !file_ic = None
