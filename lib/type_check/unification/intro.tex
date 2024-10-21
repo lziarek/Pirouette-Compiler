@@ -1,0 +1,196 @@
+\documentclass[t]{beamer}
+\usepackage{graphicx}
+\usepackage{color}
+\usepackage{fontspec}
+
+% set the font
+\setmonofont{Courier New}
+
+% set the theme
+\usetheme{Boadilla}
+\usefonttheme{professionalfonts}
+\setbeamerfont{section in toc}{size=\normalsize}
+\setbeamerfont{subsection in toc}{size=\small}
+\setbeamerfont{section number projected}{size=\small}
+\setbeamerfont{subsection number projected}{size=\small}
+\setbeamerfont{footnote}{size=\tiny}
+
+
+% show the table of contents before each subsection
+% and highlight the current subsection
+%
+\AtBeginSubsection[]{
+  \begin{frame}
+    \frametitle{Overview}
+    \tableofcontents[currentsection, currentsubsection]
+  \end{frame}
+}
+
+
+% only show the table of contents before each section
+% and highlight the current section
+%
+% \AtBeginSection[]{
+%   \begin{frame}
+%     \frametitle{Overview}
+%     \tableofcontents[currentsection]
+%   \end{frame}
+% }
+
+
+\begin{document}
+
+    \author{Vincent Chan}
+    \title{Unification Algorithm}
+    \date{\today}
+
+
+    % show the title page
+    %
+    \begin{frame}
+        \titlepage
+    \end{frame}
+
+
+    % show the table of contents
+    % \section{Overview}
+    %
+    % \section{Type Inference}
+    % \subsection{Type Inference for expressions}
+    % \subsection{Type Inference for let}
+    % \subsection{Type Inference for function definition}
+    % \subsection{Type Inference for function application}
+    % \subsection{Type Inference for pattern matching}
+    %
+    % \section{Unification}
+    % \subsection{Substitution}
+    % \subsection{Rules}
+    %
+    % \section{Some important points}
+    % \subsection{Difference between context/env and substitution}
+    % \subsection{Occurrence check to avoid self-reference}
+    
+
+    \begin{frame}
+        \frametitle{Overview}
+        \tableofcontents
+    \end{frame}
+
+
+    %%%%%%%%%%%%%%%%%%%%% BEGIN CONTENT %%%%%%%%%%%%%%%%%%%%%
+
+
+    \section{Type Inference}
+    \subsection{Type Inference for expressions}
+    \begin{frame}
+        \frametitle{Type Inference for expressions}
+        \begin{itemize}
+            \item Given an expression with context, we want to infer the type of the expression and unify the rules of substitution.
+            \item Recursively infer the type of the sub-expressions, and combine the return substitutions.
+            \item apply the substitution to the type of the sub-expression to rewrite the type.
+            \item Unify the "new types" with expected types, and get the substitutions
+            \item combine all these substitutions and return with the final type of the expression.
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Type Inference for let}
+    \begin{frame}
+        \frametitle{Type Inference for let}
+        {\ttfamily Let of stmt list * expr}
+        \begin{itemize}
+            \item Infer the type of the binding expression with the current context.
+            \item Add all the type of the binding expression to the context.
+            \item Infer the type of the func body with the new context.
+            \item Return the type of the func body with two substitutions combined.
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Type Inference for function definition}
+    \begin{frame}
+        \frametitle{Type Inference for function definition}
+        {\ttfamily FunDef of pattern list * expr}
+        \begin{itemize}
+            \item Function type consists of parameter list and function body.
+            \item Give each parameter a fresh new type, add them to the context.
+            \item Infer the type of the expression with the new context.
+            \item Use new context to infer the type of the function body.
+            \item Return TMap of the parameter types and the type of the function body.
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Type Inference for function application}
+    \begin{frame}
+        \frametitle{Type Inference for function application}
+        {\ttfamily FunApp of expr * expr}
+        \begin{itemize}
+            \item Infer the type of the function $e1$
+            \item Infer the type of the parameter $e2$
+            \item A fresh new type for the return type of the function.
+            \item Unify the subst of formal type of the function with the actual function type.
+            \item Unify the return type of the function with subst.
+            \item Return the return type with the combined subst.
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Type Inference for pattern matching}
+    \begin{frame}
+        \frametitle{Type Inference for pattern matching}
+        {\ttfamily Match of expr * (pattern * expr) list}
+        \begin{itemize}
+            \item Infer the type of the match expression with the current context.
+            \item Use an aux function to infer the list of pattern and expression,
+            Type of the pattern should be the same as the type of the match expression, 
+            and the type of all the sub expression should be the same.
+        \end{itemize}
+    \end{frame}
+
+    \section{Unification}
+    \subsection{Substitution}
+    \begin{frame}
+        \frametitle{Substitution}
+        \begin{itemize}
+            \item A list of (type variable * type).
+            \item Can be applied to a type to get a new type.
+            \item Can be applied to another substitution to get a new substitution.
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Rules}
+    \begin{frame}
+        \frametitle{Rules}
+        \begin{itemize}
+            \item If two const types are the same, return empty substitution.
+            \item If one of the type is a type variable, and $t1$ does not occur in $t2$ $(t1 \neq t2)$, return a substitution with $(t1, t2)$.
+            \item If both types are function types, unify the parameter types and return the substitution.
+            \item Everything else, return an error.
+        \end{itemize}
+    \end{frame}
+
+    \section{Some important points}
+    \subsection{Difference between context/env and substitution}
+    \begin{frame}
+        \frametitle{Difference between context/env and substitution}
+        \begin{itemize}
+            \item The type of them are both {\ttfamily (string * typ) list}.
+            \item context is used to store the type of variables {\ttfamily ctx = [("foo", TInt), ("bar", TBool)]}, 
+            it can be changed to reflect the type of the variable in the current scope. 
+            \item substitution is used to store the type of type variables {\ttfamily subst = [("T1", TInt), ("T2", TBool)]}, 
+            it accumulates the type of type variables during the unification process, and is used to substitute the type of type variables in the final type.
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Occurrence check to avoid self-reference}
+    \begin{frame}
+        \frametitle{Occurrence check to avoid self-reference}
+        \begin{itemize}
+            \item When unifying two types, we need to check if the type variable occurs in the other type.
+            \item If it does, we cannot unify them, because it will cause self-reference.
+            \item For example, if we unify $T1$ with $T1 \rightarrow T2$, it will cause $T1 \rightarrow (T1 \rightarrow (T1 \rightarrow ...))$, 
+            which is an infinite type, and will cause the program to hang.
+            \item Use {\ttfamily Stringset.mem t1 (freevars t2)} // freevars returns the set of all type variables that occur in the type.
+        \end{itemize}
+    \end{frame}
+
+    %%%%%%%%%%%%%%%%%%%%% END CONTENT %%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
