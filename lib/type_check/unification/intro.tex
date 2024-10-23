@@ -113,7 +113,6 @@
             \item Function type consists of parameter list and function body.
             \item Give each parameter a fresh new type, add them to the context.
             \item Infer the type of the expression with the new context.
-            \item Use new context to infer the type of the function body.
             \item Return TMap of the parameter types and the type of the function body.
         \end{itemize}
     \end{frame}
@@ -126,8 +125,9 @@
             \item Infer the type of the function $e1$
             \item Infer the type of the parameter $e2$
             \item A fresh new type for the return type of the function.
-            \item Unify the subst of formal type of the function with the actual function type.
-            \item Unify the return type of the function with subst.
+            \item Unify the subst of formal type ($e1$) of the function 
+            with the actual function type $e2 \rightarrow newTyp$ .
+            \item Unify the return type of the function.
             \item Return the return type with the combined subst.
         \end{itemize}
     \end{frame}
@@ -151,7 +151,7 @@
         \begin{itemize}
             \item A list of (type variable * type).
             \item Can be applied to a type to get a new type.
-            \item Can be applied to another substitution to get a new substitution.
+            \item Can also be applied to another substitution to get a new substitution.
         \end{itemize}
     \end{frame}
 
@@ -160,7 +160,7 @@
         \frametitle{Rules}
         \begin{itemize}
             \item If two const types are the same, return empty substitution.
-            \item If one of the type is a type variable, and $t1$ does not occur in $t2$ $(t1 \neq t2)$, return a substitution with $(t1, t2)$.
+            \item If one of the type is a type variable, and $t1$ does not occur in $t2$ $(t1 \notin t2)$, return a substitution with $(t1, t2)$.
             \item If both types are function types, unify the parameter types and return the substitution.
             \item Everything else, return an error.
         \end{itemize}
