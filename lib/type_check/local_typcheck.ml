@@ -148,12 +148,45 @@ let rec infer_local_expr local_ctx typ : substitution * ftv Local.typ =
      | Local.TSum (_, t2, _) -> s1, Local.TSum (apply_subst_typ s1 t, t2, _m)
      | _ -> failwith "Right Type error")
   | Local.Match (_e, _cases, _) -> failwith "Match not implemented"
-  | _ -> [], Local.TUnit _m
 
 and typeof_Val = function
   | Int _ -> TInt (Ok "TInt")
   | Bool _ -> TBool (Ok "TBool")
   | String _ -> TString (Ok "TString")
+;;
+
+let rec infer_local_pattern (local_ctx : (typvar * ftv Local.typ) list) patt
+  : substitution * ftv Local.typ
+  =
+  match patt with
+  | Local.Default _ -> [], Local.TUnit (Ok "TUnit")
+  | Local.Val (v, _) -> [], typeof_Val v
+  | Local.Var (Local.VarId (var_name, _), _) ->
+    (match ctx_lookup local_ctx var_name with
+     | Ok t -> [], t
+     | _ -> failwith "Variable not found")
+  | Local.Pair (p1, p2, _) ->
+    let s1, t1 = infer_local_pattern local_ctx p1 in
+    let s2, t2 = infer_local_pattern (apply_subst_ctx s1 local_ctx) p2 in
+    s1 @ s2, Local.TProd (apply_subst_typ s2 t1, apply_subst_typ s2 t2, _m)
+  (* | Local.Left (p, _) ->
+     let s, t = infer_local_pattern local_ctx p in
+     let new_var = Local.TSum (t, gen_ftv (), _m) in
+     s, new_var
+     | Local.Right (p, _) ->
+     let s, t = infer_local_pattern local_ctx p in
+     let new_var = Local.TSum (gen_ftv (), t, _m) in
+     s, new_var *)
+  | Local.Left (p, _) ->
+    let s, t = infer_local_pattern local_ctx p in
+    (match t with
+     | Local.TSum (t1, _, _) -> s, Local.TSum (t1, apply_subst_typ s t, _m)
+     | _ -> failwith "Left Type error")
+  | Local.Right (p, _) ->
+    let s, t = infer_local_pattern local_ctx p in
+    (match t with
+     | Local.TSum (_, t2, _) -> s, Local.TSum (apply_subst_typ s t, t2, _m)
+     | _ -> failwith "Right Type error")
 ;;
 
 (* let rec check_local_expr ctx expected_typ = function
