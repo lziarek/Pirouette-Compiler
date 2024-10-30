@@ -27,6 +27,7 @@ let rec jsonify_local_type = function
   | Local.TInt _ -> `String "TInt"
   | Local.TString _ -> `String "TString"
   | Local.TBool _ -> `String "TBool"
+  | Local.TVar (TypId (id, _), _) -> `String id
   | Local.TProd (t1, t2, _) ->
     `Assoc [ "TProd", `List [ jsonify_local_type t1; jsonify_local_type t2 ] ]
   | Local.TSum (t1, t2, _) ->

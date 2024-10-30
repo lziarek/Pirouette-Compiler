@@ -70,6 +70,8 @@ let rec dot_local_type (typ : Local.typ) : string * string =
   | TInt pos -> spf "%s [label=\"Int %s\"];\n" node_name (string_of_pos pos), node_name
   | TString pos ->
     spf "%s [label=\"String %s\"];\n" node_name (string_of_pos pos), node_name
+  | TVar (TypId (id, _), pos) ->
+    spf "%s [label=\"%s %s\"];\n" node_name id (string_of_pos pos), node_name
   | TBool pos -> spf "%s [label=\"Bool %s\"];\n" node_name (string_of_pos pos), node_name
   | TProd (typ1, typ2, pos) ->
     let c1, n1 = dot_local_type typ1 in

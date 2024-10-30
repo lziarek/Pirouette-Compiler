@@ -32,6 +32,7 @@ let rec pprint_local_type ppf (typ : 'a Local.typ) =
   | TInt _ -> fprintf ppf "@[<h>int@]"
   | TString _ -> fprintf ppf "@[<h>string@]"
   | TBool _ -> fprintf ppf "@[<h>bool@]"
+  | TVar (TypId (id, _), _) -> fprintf ppf "@[<h>%s@]" id
   | TProd (t1, t2, _) ->
     fprintf ppf "@[<h>%a * %a@]" pprint_local_type t1 pprint_local_type t2
   | TSum (t1, t2, _) ->
