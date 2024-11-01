@@ -17,15 +17,14 @@ type global_context = (string * ftv Local.typ) list
 let (_m : ftv) = Ok "dummy info"
 
 let rec unify t1 t2 =
-  (*How to unify a variable with concrete type in this unify function?*)
-  (*Local.typ doesn't have Var.*)
   match t1, t2 with
   | Local.TInt _, Local.TInt _
   | Local.TBool _, Local.TBool _
   | Local.TString _, Local.TString _
   | Local.TUnit _, Local.TUnit _ -> []
-  | Local.TVar (var_name, _), t | t, Local.TVar (var_name, _) ->
-    if t = Local.TVar (var_name, _m)
+  | Local.TVar (Local.TypId (var_name, _), _), t
+  | t, Local.TVar (Local.TypId (var_name, _), _) ->
+    if t = Local.TVar (Local.TypId (var_name, _m), _m)
     then []
     else if occurs_in var_name t
     then failwith "Occurs check failed"
@@ -41,16 +40,15 @@ let rec unify t1 t2 =
 and occurs_in var_name t2 =
   match t2 with
   | Local.TInt _ | Local.TBool _ | Local.TString _ | Local.TUnit _ -> false
-  | Local.TVar (var_name', _) -> var_name = var_name'
+  | Local.TVar (Local.TypId (var_name', _), _) -> var_name = var_name'
   | Local.TProd (t2a, t2b, _) | Local.TSum (t2a, t2b, _) ->
     occurs_in var_name t2a || occurs_in var_name t2b
 
 (*traverse the substitution list `s`, apply all occurences of subst to `t`*)
-(*but we don't have var in Local.typ*)
 and apply_subst_typ s t =
   match t with
   | (Local.TInt _ | Local.TBool _ | Local.TString _ | Local.TUnit _) as t' -> t'
-  | Local.TVar (var_name, _) ->
+  | Local.TVar (Local.TypId (var_name, _), _) ->
     (try List.assoc var_name s with
      | Not_found -> failwith "Type variable not found when applying substitution")
   | Local.TProd (t1, t2, _) -> Local.TProd (apply_subst_typ s t1, apply_subst_typ s t2, _m)
@@ -66,7 +64,7 @@ and gen_ftv =
   fun () ->
     let v = !counter in
     counter := !counter + 1;
-    Local.TVar (Local.TypId ("T" ^ string_of_int v, _m), _m)
+    "T" ^ string_of_int v
 ;;
 
 (*add varname:vartype pair to context list*)
@@ -164,15 +162,46 @@ let rec infer_local_expr local_ctx = function
     (match t with
      | Local.TSum (_, t2, _) -> s1, Local.TSum (apply_subst_typ s1 t, t2, _m)
      | _ -> failwith "Right Type error")
-  | Local.Match (_e, _cases, _) -> failwith "Match not implemented"
+  | Local.Match (e, cases, _) ->
+    (*infer expr*)
+    let s1, t_match = infer_local_expr local_ctx e in
+    let t_match' = apply_subst_typ s1 t_match in
+    (*infer cases*)
+    let patt_ls, expr_ls = List.split cases in
+    (*infer patterns to get list of each subst, each types, each ctx*)
+    let ls = List.map (fun patt -> infer_local_pattern local_ctx patt) patt_ls in
+    let s2, t_ls, ctx_ls =
+      List.fold_right
+        (fun (s, t, ctx) (s_acc, t_acc, ctx_acc) -> s @ s_acc, t :: t_acc, ctx :: ctx_acc)
+        ls
+        ([], [], [])
+    in
+    (* for each type, apply subst to rewrite the types',then unify with type of t_match'*)
+    let t_ls' = List.map (fun t -> apply_subst_typ s2 t) t_ls in
+    let s3 = List.fold_right (fun t acc -> unify t t_match' @ acc) t_ls' [] in
+    (*for each sub exprs, infer it with contexts from each patterns*)
+    (*apply, unify, return typ of expr*)
+    (*also check if type mismatch during list of patterns and exprs*)
+    (*infer each sub expr by each ctx@local_ctx, get a list of substs with list of types*)
+    let s4, typ_ls =
+      List.fold_right
+        (fun (expr, ctx) (s_acc, typ_acc) ->
+          let s, typ = infer_local_expr (apply_subst_ctx s2 ctx @ local_ctx) expr in
+          s @ s_acc, typ :: typ_acc)
+        (List.combine expr_ls ctx_ls)
+        ([], [])
+    in
+    let typ_ls' = List.map (fun t -> apply_subst_typ s4 t) typ_ls in
+    let s5 = List.fold_left (fun acc t -> unify t (List.hd typ_ls') @ acc) [] typ_ls' in
+    s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ s5 (List.hd typ_ls')
+(*unify each type with expected type*)
 
 and typeof_Val = function
   | Int _ -> TInt _m
   | Bool _ -> TBool _m
   | String _ -> TString _m
-;;
 
-let rec infer_local_pattern local_ctx = function
+and infer_local_pattern local_ctx = function
   | Local.Default _ -> [], Local.TUnit _m, []
   | Local.Val (v, _) -> [], typeof_Val v, []
   | Local.Var (Local.VarId (var_name, _), _) ->
@@ -185,10 +214,10 @@ let rec infer_local_pattern local_ctx = function
     s1 @ s2, Local.TProd (apply_subst_typ s2 t1, apply_subst_typ s2 t2, _m), ctx1 @ ctx2
   | Local.Left (p, _) ->
     let s, t, ctx = infer_local_pattern local_ctx p in
-    s, Local.TSum (t, gen_ftv (), _m), ctx
+    s, Local.TSum (t, Local.TVar (Local.TypId (gen_ftv (), _m), _m), _m), ctx
   | Local.Right (p, _) ->
     let s, t, ctx = infer_local_pattern local_ctx p in
-    s, Local.TSum (gen_ftv (), t, _m), ctx
+    s, Local.TSum (Local.TVar (Local.TypId (gen_ftv (), _m), _m), t, _m), ctx
 ;;
 
 (* let rec check_local_expr ctx expected_typ = function
