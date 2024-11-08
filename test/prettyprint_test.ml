@@ -3,7 +3,7 @@
    Date: 04-25-2024
 
    Tests for the pretty print module.
-   Read and parse the string representation of a program from Testcases.ml to AST
+   Read and parse the string representation of a program from astutils_testcases.ml to AST
    pretty print it in formatted code and then parse the result back to check
    if the ASTs are identical.
 *)
@@ -23,21 +23,21 @@ let peq (s : string) =
 let suite =
   "Pretty print Tests"
   >::: [ "Examples"
-         >::: [ ("testcase1" >:: fun _ -> peq Testcases.testcase_1)
-              ; ("testcase2" >:: fun _ -> peq Testcases.testcase_2)
-              ; ("testcase3" >:: fun _ -> peq Testcases.testcase_3)
-              ; ("testcase4" >:: fun _ -> peq Testcases.testcase_4)
+         >::: [ ("testcase1" >:: fun _ -> peq Astutils_testcases.testcase_1)
+              ; ("testcase2" >:: fun _ -> peq Astutils_testcases.testcase_2)
+              ; ("testcase3" >:: fun _ -> peq Astutils_testcases.testcase_3)
+              ; ("testcase4" >:: fun _ -> peq Astutils_testcases.testcase_4)
               ]
        ; "Type Decls"
-         >::: [ ("choreo_typs" >:: fun _ -> peq Testcases.choreo_typs)
-              ; ("local_typs" >:: fun _ -> peq Testcases.local_typs)
+         >::: [ ("choreo_typs" >:: fun _ -> peq Astutils_testcases.choreo_typs)
+              ; ("local_typs" >:: fun _ -> peq Astutils_testcases.local_typs)
               ]
        ; "Functions"
-         >::: [ ("define a function" >:: fun _ -> peq Testcases.choreo_fundef) ]
+         >::: [ ("define a function" >:: fun _ -> peq Astutils_testcases.choreo_fundef) ]
        ; "Pattern Matching"
-         >::: [ ("choreo_pat_match" >:: fun _ -> peq Testcases.choreo_pat_match)
-              ; ("local_pat_match" >:: fun _ -> peq Testcases.lcl_pat_match)
-              ; ("local_pat_match_2" >:: fun _ -> peq Testcases.lcl_pat_match_2)
+         >::: [ ("choreo_pat_match" >:: fun _ -> peq Astutils_testcases.choreo_pat_match)
+              ; ("local_pat_match" >:: fun _ -> peq Astutils_testcases.lcl_pat_match)
+              ; ("local_pat_match_2" >:: fun _ -> peq Astutils_testcases.lcl_pat_match_2)
               ]
        ]
 ;;

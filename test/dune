@@ -1,6 +1,6 @@
 (test
  (name prettyprint_test)
- (modules prettyprint_test testcases)
+ (modules prettyprint_test astutils_testcases)
  (libraries parsing ounit2 ast_utils))
 
 (test
