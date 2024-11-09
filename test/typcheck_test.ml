@@ -12,34 +12,25 @@ open OUnit2
 
 let typ_eq = assert_equal ~printer:string_of_bool true
 
-let suite = 
-  "Unfninished Type inference tests"
-  >:::[
-    "Testcase 1" >:: (fun _ -> typ_eq true);
-  ]
+let suite =
+  "Unfninished Type inference tests" >::: [ ("Testcase 1" >:: fun _ -> typ_eq true) ]
+;;
 
 let () = run_test_tt_main suite
-
-
-
-
-
-
-
 
 (*Outdated test code for boolean type checker*)
 
 (* let m : Ast.Metainfo.metainfo = "", 0, 0, 0
 
-let typ_eq (s : string) (expected_typ : Ast.Choreo.typ) =
-  let program = Parsing.parse_program (Lexing.from_string s) in
-  let result = Type_check.choreo_typ_check program expected_typ in
-  assert_equal result true
-;;
+   let typ_eq (s : string) (expected_typ : Ast.Choreo.typ) =
+   let program = Parsing.parse_program (Lexing.from_string s) in
+   let result = Type_check.choreo_typ_check program expected_typ in
+   assert_equal result true
+   ;;
 
-let suite =
-  "Type Checking Tests"
-  >::: [ "Examples"
+   let suite =
+   "Type Checking Tests"
+   >::: [ "Examples"
          >::: [ ("testcase1"
                  >:: fun _ ->
                  typ_eq
@@ -65,6 +56,6 @@ let suite =
                       , m )))
               ]
        ]
-;;
+   ;;
 
-let () = run_test_tt_main suite *)
+   let () = run_test_tt_main suite *)

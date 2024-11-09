@@ -171,23 +171,29 @@ let rec infer_local_expr local_ctx = function
     s1 @ s2, Local.TProd (apply_subst_typ s2 t1, apply_subst_typ s2 t2, _m)
   | Local.Fst (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    (match t with
+    let t' = apply_subst_typ s1 t in
+    (match t' with
      | Local.TProd (t1, _, _) -> s1, t1
      | _ -> failwith "Fst Type error")
   | Local.Snd (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    (match t with
+    let t' = apply_subst_typ s1 t in
+    (match t' with
      | Local.TProd (_, t2, _) -> s1, t2
      | _ -> failwith "Snd Type error")
   | Local.Left (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    (match t with
-     | Local.TSum (t1, _, _) -> s1, Local.TSum (t1, apply_subst_typ s1 t, _m)
+    let t' = apply_subst_typ s1 t in
+    (match t' with
+     | Local.TSum (t1, _, _) ->
+       s1, Local.TSum (t1, Local.TVar (Local.TypId (gen_ftv (), _m), _m), _m)
      | _ -> failwith "Left Type error")
   | Local.Right (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    (match t with
-     | Local.TSum (_, t2, _) -> s1, Local.TSum (apply_subst_typ s1 t, t2, _m)
+    let t' = apply_subst_typ s1 t in
+    (match t' with
+     | Local.TSum (_, t2, _) ->
+       s1, Local.TSum (Local.TVar (Local.TypId (gen_ftv (), _m), _m), t2, _m)
      | _ -> failwith "Right Type error")
   | Local.Match (e, cases, _) ->
     (*infer expr*)
@@ -273,25 +279,33 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
     let s1, t = infer_choreo_expr choreo_ctx global_ctx e in
     let t' = apply_subst_typ_choreo s1 t in
     (match t' with
-     (*should we be checking the _loc_id with the src location id// we should*)
-     | Choreo.TLoc (_loc_id, local_t, _) ->
-       let s2 = unify_choreo t' (Choreo.TLoc (Local.LocId (src, _m), local_t, _m)) in
-       s1 @ s2, Choreo.TLoc (Local.LocId (dst, _m), local_t, _m)
+     (*check if the loc_id with the src location id*)
+     | Choreo.TLoc (Local.LocId (loc_id, _), local_t, _) ->
+       if loc_id = src
+       then (
+         let s2 = unify_choreo t' (Choreo.TLoc (Local.LocId (src, _m), local_t, _m)) in
+         s1 @ s2, Choreo.TLoc (Local.LocId (dst, _m), local_t, _m))
+       else failwith "Source location mismatch"
      | _ -> failwith "Type mismatch")
     (*am i not using TLoc properly?*)
   | Choreo.Sync (_, _, _, e, _) -> infer_choreo_expr choreo_ctx global_ctx e
-  | Choreo.If (e1, e2, e3, _) ->
-    let s1, t1 = infer_choreo_expr choreo_ctx global_ctx e1 in
-    let s2, t2 = infer_choreo_expr (apply_subst_ctx_choreo s1 choreo_ctx) global_ctx e2 in
-    let s3, t3 =
-      infer_choreo_expr (apply_subst_ctx_choreo (s1 @ s2) choreo_ctx) global_ctx e3
-    in
-    let s4 = unify_choreo t2 t3 in
-    s1 @ s2 @ s3 @ s4, apply_subst_typ_choreo s4 t2
+  | Choreo.If (cond, e1, e2, _) ->
+    let s_cond, t_cond = infer_choreo_expr choreo_ctx global_ctx cond in
+    (match t_cond with
+     | Choreo.TLoc (_, Local.TBool _, _) ->
+       let s1, t1 =
+         infer_choreo_expr (apply_subst_ctx_choreo s_cond choreo_ctx) global_ctx e1
+       in
+       let s2, t2 =
+         infer_choreo_expr (apply_subst_ctx_choreo s1 choreo_ctx) global_ctx e2
+       in
+       let s3 = unify_choreo t1 t2 in
+       s_cond @ s1 @ s2 @ s3, apply_subst_typ_choreo s3 t2
+     | _ -> failwith "Expected boolean type")
   | Choreo.Let (stmts, e, _) ->
     let s1, t1 = infer_choreo_stmt_block stmts in
     let s2, t2 = infer_choreo_expr (apply_subst_ctx_choreo s1 choreo_ctx) global_ctx e in
-    s1 @ s2, t2
+    s1 @ s2, apply_subst_typ_choreo s2 t1
   | Choreo.FunDef (patterns, e, _) ->
     let s1, t1s, ctx =
       List.fold_right
@@ -310,20 +324,44 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
     s1 @ s2, Choreo.TProd (t1, t2, _m)
   | Choreo.Fst (e, _) ->
     let s, t = infer_choreo_expr choreo_ctx global_ctx e in
-    (match t with
+    let t' = apply_subst_typ_choreo s t in
+    (match t' with
      | Choreo.TProd (t1, _, _) -> s, t1
      | _ -> failwith "Expected product type")
   | Choreo.Snd (e, _) ->
     let s, t = infer_choreo_expr choreo_ctx global_ctx e in
-    (match t with
+    let t' = apply_subst_typ_choreo s t in
+    (match t' with
      | Choreo.TProd (_, t2, _) -> s, t2
      | _ -> failwith "Expected product type")
   | Choreo.Left (e, _) ->
     let s, t = infer_choreo_expr choreo_ctx global_ctx e in
-    s, Choreo.TSum (t, Local.TVar (Local.TypId (gen_ftv (), _m), _m), _m)
+    let t' = apply_subst_typ_choreo s t in
+    (match t' with
+     | Choreo.TSum (t1, _, _) ->
+       ( s
+       , Choreo.TSum
+           ( t1
+           , Choreo.TLoc
+               ( Local.LocId ("dummy", _m)
+               , Local.TVar (Local.TypId (gen_ftv (), _m), _m)
+               , _m )
+           , _m ) )
+     | _ -> failwith "Expected sum type")
   | Choreo.Right (e, _) ->
     let s, t = infer_choreo_expr choreo_ctx global_ctx e in
-    s, Choreo.TSum (Local.TVar (Local.TypId (gen_ftv (), _m), _m), t, _m)
+    let t' = apply_subst_typ_choreo s t in
+    (match t' with
+     | Choreo.TSum (_, t2, _) ->
+       ( s
+       , Choreo.TSum
+           ( Choreo.TLoc
+               ( Local.LocId ("dummy", _m)
+               , Local.TVar (Local.TypId (gen_ftv (), _m), _m)
+               , _m )
+           , t2
+           , _m ) )
+     | _ -> failwith "Expected sum type")
   | Choreo.Match (e, cases, _) ->
     let s1, t_match = infer_choreo_expr choreo_ctx global_ctx e in
     let pats, exprs = List.split cases in
