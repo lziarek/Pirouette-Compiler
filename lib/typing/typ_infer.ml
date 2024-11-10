@@ -37,7 +37,7 @@ let rec unify t1 t2 : local_subst =
     s1 @ s2
   | _ -> failwith "Unification failed"
 
-and unify_choreo (t1 : ftv Choreo.typ) (t2 : ftv Choreo.typ) : choreo_subst =
+(* and unify_choreo (t1 : ftv Choreo.typ) (t2 : ftv Choreo.typ) : choreo_subst =
   match t1, t2 with
   | Choreo.TProd (t1a, t1b, _), Choreo.TProd (t2a, t2b, _)
   | Choreo.TSum (t1a, t1b, _), Choreo.TSum (t2a, t2b, _) ->
@@ -46,16 +46,16 @@ and unify_choreo (t1 : ftv Choreo.typ) (t2 : ftv Choreo.typ) : choreo_subst =
       unify_choreo (apply_subst_typ_choreo s1 t1b) (apply_subst_typ_choreo s1 t2b)
     in
     s1 @ s2
-  | _ -> failwith "Unification failed"
+  | _ -> failwith "Unification failed" *)
 
 (* Apply substitution to a Choreo.typ *)
-and apply_subst_typ_choreo (s : choreo_subst) (t : ftv Choreo.typ) : ftv Choreo.typ =
-  match t with
-  | Choreo.TProd (t1, t2, _) ->
-    Choreo.TProd (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
-  | Choreo.TSum (t1, t2, _) ->
-    Choreo.TSum (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
-  | _ -> failwith "Type not found when applying substitution"
+(* and apply_subst_typ_choreo (s : choreo_subst) (t : ftv Choreo.typ) : ftv Choreo.typ =
+   match t with
+   | Choreo.TProd (t1, t2, _) ->
+   Choreo.TProd (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, _m)
+   | Choreo.TSum (t1, t2, _) ->
+   Choreo.TSum (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, _m)
+   | _ -> failwith "Type not found when applying substitution" *)
 
 (*occurs check: ensure t1 does not occur in t2*)
 and occurs_in var_name t2 =
@@ -80,10 +80,10 @@ and apply_subst_ctx subst ctx =
   List.map (fun (var_name, var_type) -> var_name, apply_subst_typ subst var_type) ctx
 
 (*apply substitution to choreo context *)
-and apply_subst_ctx_choreo (subst : choreo_subst) (ctx : choreo_ctx) : choreo_ctx =
-  List.map
-    (fun (var_name, var_type) -> var_name, apply_subst_typ_choreo subst var_type)
-    ctx
+(* and apply_subst_ctx_choreo (subst : choreo_subst) (ctx : choreo_ctx) : choreo_ctx =
+   List.map
+   (fun (var_name, var_type) -> var_name, apply_subst_typ_choreo subst var_type)
+   ctx *)
 
 (*generate unique free type variables*)
 and gen_ftv =
@@ -102,20 +102,15 @@ let add_binding ctx var_name var_type = (var_name, var_type) :: ctx
 and ctx_lookup ctx var_name =
   try Ok (List.assoc var_name ctx) with
   | Not_found -> Error "Variable not found"
+;;
 
 (*extract loc_id's local context from glocal context*)
-and extract_local_ctx (global_ctx : global_ctx) loc_id =
-  List.fold_right
-    (fun (loc, var_name, typ) acc -> if loc = loc_id then (var_name, typ) :: acc else acc)
-    global_ctx
-    []
-
-and get_choreo_sub local_subst loc_id =
-  List.fold_right
-    (fun (var_name, typ) acc -> (var_name, Choreo.TLoc (loc_id, typ, m)) :: acc)
-    local_subst
-    []
-;;
+(* and extract_local_ctx (global_ctx : global_ctx) loc_id =
+   List.fold_right
+   (fun (loc, var_name, typ) acc -> if loc = loc_id then (var_name, typ) :: acc else acc)
+   global_ctx
+   []
+   ;; *)
 
 (* ============================== Local ============================== *)
 
@@ -263,7 +258,7 @@ and infer_local_pattern local_ctx = function
 
 (* ============================== Choreo ============================== *)
 
-let rec infer_choreo_stmt choreo_ctx global_ctx stmt : choreo_subst * ftv Choreo.typ =
+(* let rec infer_choreo_stmt choreo_ctx global_ctx stmt : choreo_subst * ftv Choreo.typ =
   match stmt with
   | Choreo.Decl (pattn, choreo_typ, _) -> failwith "Not implemented"
   | Choreo.Assign (pattn_ls, expr, _) -> infer_choreo_expr choreo_ctx global_ctx expr
@@ -404,6 +399,7 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
       List.fold_left (fun acc t -> unify_choreo t (List.hd types) @ acc) [] types
     in
     s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ_choreo s5 (List.hd types)
+;; *)
 
 and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.Default _ -> [], Choreo.TUnit m, []

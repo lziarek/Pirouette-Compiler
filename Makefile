@@ -20,6 +20,9 @@ json:
 dot: 
 	dune exec pirc -- -dot $(FILE)
 
+test-infer: cleanall
+	dune exec test/typcheck_test.exe
+
 test-pp: cleanall
 	dune exec test/prettyprint_test.exe
 
