@@ -399,7 +399,6 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
       List.fold_left (fun acc t -> unify_choreo t (List.hd types) @ acc) [] types
     in
     s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ_choreo s5 (List.hd types)
-;; *)
 
 and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.Default _ -> [], Choreo.TUnit m, []
@@ -427,7 +426,7 @@ and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.Right (p, _) ->
     let s, t, ctx = infer_choreo_pattern choreo_ctx global_ctx p in
     s, Choreo.TSum (Local.TVar (Local.TypId (gen_ftv (), m), m), t, m), ctx
-;;
+;;*)
 
 (* let rec check_local_expr ctx expected_typ = function
    | Local.Unit _ -> expected_typ = Local.TUnit m

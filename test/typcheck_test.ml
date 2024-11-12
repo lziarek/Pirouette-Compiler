@@ -75,12 +75,34 @@ let incorrect_typ_binding =
 
 (*local patterns*)
 let int_p : ftv Local.pattern = Val (Int (1, m), m)
-let default_p : ftv Local.pattern = Default m
+let def_p : ftv Local.pattern = Default m
 let var_p : ftv Local.pattern = Var (VarId ("foo", m), m)
 let string_p : ftv Local.pattern = Val (String ("hello", m), m)
 let pair_p : ftv Local.pattern = Pair (var_p, string_p, m)
-let left_p : ftv Local.pattern = Left (int_p, m)
-let right_p : ftv Local.pattern = Right (int_p, m)
+let left_int_p : ftv Local.pattern = Left (int_p, m)
+let right_def_p : ftv Local.pattern = Right (def_p, m)
+
+(*pattern match of local expr*)
+let _int_pattn_match =
+  Local.Match
+    ( Var (VarId ("foo", m), m)
+    , [ left_int_p, correct_binop_int_e; right_def_p, correct_unop_int_e ]
+    , m )
+;;
+
+let _mismatched_return_match =
+  Local.Match
+    ( Var (VarId ("foo", m), m)
+    , [ left_int_p, correct_binop_int_e; right_def_p, correct_and_bool_e ]
+    , m )
+;;
+
+let _mismatched_pattn_match =
+  Local.Match
+    ( Var (VarId ("foo", m), m)
+    , [ left_int_p, correct_binop_int_e; Right (string_p, m), correct_unop_int_e ]
+    , m )
+;;
 
 let expr_typ_eq e expected_t =
   let subst, t = infer_local_expr [] e in
@@ -140,7 +162,7 @@ let correct_pattn_suite =
   "Local pattern type inference tests"
   >::: [ ("Correct infer local int pattern" >:: fun _ -> TInt m |> pattn_typ_eq int_p [])
        ; ("Correct infer local default pattern"
-          >:: fun _ -> TUnit m |> pattn_typ_eq default_p [])
+          >:: fun _ -> TUnit m |> pattn_typ_eq def_p [])
        ; ("Correct infer local string pattern"
           >:: fun _ -> TString m |> pattn_typ_eq string_p [])
        ; ("Correct infer local pair pattern"
@@ -149,10 +171,10 @@ let correct_pattn_suite =
           |> pattn_typ_eq pair_p [ "foo", TVar (TypId ("T0", m), m) ])
        ; ("Correct infer local left pattern"
           >:: fun _ ->
-          TSum (TInt m, TVar (TypId ("T0", m), m), m) |> pattn_typ_eq left_p [])
+          TSum (TInt m, TVar (TypId ("T0", m), m), m) |> pattn_typ_eq left_int_p [])
        ; ("Correct infer local right pattern"
           >:: fun _ ->
-          TSum (TVar (TypId ("T0", m), m), TInt m, m) |> pattn_typ_eq right_p [])
+          TSum (TVar (TypId ("T0", m), m), TUnit m, m) |> pattn_typ_eq right_def_p [])
        ]
 ;;
 
