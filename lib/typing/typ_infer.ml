@@ -199,8 +199,8 @@ let rec infer_local_expr local_ctx = function
     s1, Local.TSum (Local.TVar (Local.TypId (gen_ftv (), m), m), t', m)
   | Local.Match (e, cases, _) ->
     (*infer expr*)
-    let s1, tmatch = infer_local_expr local_ctx e in
-    let tmatch' = apply_subst_typ s1 tmatch in
+    let s1, t_match = infer_local_expr local_ctx e in
+    let t_match' = apply_subst_typ s1 t_match in
     (*infer cases*)
     let patt_ls, expr_ls = List.split cases in
     (*infer patterns to get list of each subst, each types, each ctx*)
@@ -211,9 +211,9 @@ let rec infer_local_expr local_ctx = function
         ls
         ([], [], [])
     in
-    (* for each type, apply subst to rewrite the types',then unify with type of tmatch'*)
+    (* for each type, apply subst to rewrite the types',then unify with type of t_match'*)
     let t_ls' = List.map (fun t -> apply_subst_typ s2 t) t_ls in
-    let s3 = List.fold_right (fun t acc -> unify t tmatch' @ acc) t_ls' [] in
+    let s3 = List.fold_right (fun t acc -> unify t t_match' @ acc) t_ls' [] in
     (*for each sub exprs, infer it with contexts from each patterns*)
     (*apply, unify, return typ of expr*)
     (*also check if type mismatch during list of patterns and exprs*)
@@ -227,8 +227,12 @@ let rec infer_local_expr local_ctx = function
         ([], [])
     in
     let typ_ls' = List.map (fun t -> apply_subst_typ s4 t) typ_ls in
-    let s5 = List.fold_left (fun acc t -> unify t (List.hd typ_ls') @ acc) [] typ_ls' in
-    s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ s5 (List.hd typ_ls')
+    (*if all the sub expression return the same type, unify them and return*)
+    if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
+    then (
+      let s5 = List.fold_left (fun acc t -> unify t (List.hd typ_ls') @ acc) [] typ_ls' in
+      s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ s5 (List.hd typ_ls'))
+    else failwith "Type of sub exprs mismatch"
 (*unify each type with expected type*)
 
 and typeof_Val = function
@@ -371,7 +375,7 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
         , t'
         , m ) )
   | Choreo.Match (e, cases, _) ->
-    let s1, tmatch = infer_choreo_expr choreo_ctx global_ctx e in
+    let s1, t_match = infer_choreo_expr choreo_ctx global_ctx e in
     let pats, exprs = List.split cases in
     let s2, ts, ctxs =
       List.fold_right
@@ -383,7 +387,7 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
     in
     let s3 =
       List.fold_right
-        (fun t acc -> unify_choreo t tmatch @ acc)
+        (fun t acc -> unify_choreo t t_match @ acc)
         (List.map (apply_subst_typ_choreo s2) ts)
         []
     in
