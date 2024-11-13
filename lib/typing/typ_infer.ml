@@ -198,42 +198,47 @@ let rec infer_local_expr local_ctx = function
     let t' = apply_subst_typ s1 t in
     s1, Local.TSum (Local.TVar (Local.TypId (gen_ftv (), m), m), t', m)
   | Local.Match (e, cases, _) ->
-    (*infer expr*)
-    let s1, t_match = infer_local_expr local_ctx e in
-    let t_match' = apply_subst_typ s1 t_match in
     (*infer cases*)
     let patt_ls, expr_ls = List.split cases in
     (*infer patterns to get list of each subst, each types, each ctx*)
     let ls = List.map (fun patt -> infer_local_pattern local_ctx patt) patt_ls in
-    let s2, t_ls, ctx_ls =
+    let s1, t_ls, ctx_ls =
       List.fold_right
         (fun (s, t, ctx) (s_acc, t_acc, ctx_acc) -> s @ s_acc, t :: t_acc, ctx :: ctx_acc)
         ls
         ([], [], [])
     in
-    (* for each type, apply subst to rewrite the types',then unify with type of t_match'*)
-    let t_ls' = List.map (fun t -> apply_subst_typ s2 t) t_ls in
-    let s3 = List.fold_right (fun t acc -> unify t t_match' @ acc) t_ls' [] in
-    (*for each sub exprs, infer it with contexts from each patterns*)
-    (*apply, unify, return typ of expr*)
-    (*also check if type mismatch during list of patterns and exprs*)
-    (*infer each sub expr by each ctx@local_ctx, get a list of substs with list of types*)
-    let s4, typ_ls =
-      List.fold_right
-        (fun (expr, ctx) (s_acc, typ_acc) ->
-          let s, typ = infer_local_expr (apply_subst_ctx s2 ctx @ local_ctx) expr in
-          s @ s_acc, typ :: typ_acc)
-        (List.combine expr_ls ctx_ls)
-        ([], [])
-    in
-    let typ_ls' = List.map (fun t -> apply_subst_typ s4 t) typ_ls in
-    (*if all the sub expression return the same type, unify them and return*)
-    if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
-    then (
-      let s5 = List.fold_left (fun acc t -> unify t (List.hd typ_ls') @ acc) [] typ_ls' in
-      s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ s5 (List.hd typ_ls'))
-    else failwith "Type of sub exprs mismatch"
-(*unify each type with expected type*)
+    (* for each type, apply subst to rewrite the types*)
+    let t_ls' = List.map (fun t -> apply_subst_typ s1 t) t_ls in
+    (match t_ls', e with
+     (*fuse types of patterns to get type of e*)
+     | [ TSum (t1, TVar _, _); TSum (TVar _, t2, _) ], Var (Local.VarId (e_name, _), _)
+     | [ TSum (TVar _, t2, _); TSum (t1, TVar _, _) ], Var (Local.VarId (e_name, _), _) ->
+       let t_match = Local.TSum (t1, t2, m) in
+       (*add the type binding into ctx so sub expr know the type of e*)
+       let local_ctx' = (e_name, t_match) :: local_ctx in
+       (*for each sub exprs, infer it with contexts from each patterns*)
+       (*apply, unify, return typ of expr*)
+       (*also check if type mismatch during list of patterns and exprs*)
+       (*infer each sub expr by each ctx@local_ctx, get a list of substs with list of types*)
+       let s2, typ_ls =
+         List.fold_right
+           (fun (expr, ctx) (s_acc, typ_acc) ->
+             let s, typ = infer_local_expr (apply_subst_ctx s1 ctx @ local_ctx') expr in
+             s @ s_acc, typ :: typ_acc)
+           (List.combine expr_ls ctx_ls)
+           ([], [])
+       in
+       let typ_ls' = List.map (fun t -> apply_subst_typ s2 t) typ_ls in
+       (*if all the sub expression return the same type, unify them and return*)
+       if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
+       then (
+         let s3 =
+           List.fold_left (fun acc t -> unify t (List.hd typ_ls') @ acc) [] typ_ls'
+         in
+         s1 @ s2 @ s3, List.hd typ_ls')
+       else failwith "Type of sub exprs mismatch"
+     | _ -> failwith "Type of patterns are not sum types")
 
 and typeof_Val = function
   | Int _ -> TInt m
