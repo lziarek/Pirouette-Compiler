@@ -22,10 +22,10 @@ val infer_choreo_expr
   -> choreo_subst * ftv Ast_core.Choreo.M.typ
 
 (* val infer_choreo_pattern
-  :  choreo_ctx
-  -> global_ctx
-  -> ftv Ast_core.Choreo.M.pattern
-  -> choreo_subst * ftv Ast_core.Choreo.M.typ * choreo_ctx *)
+   :  choreo_ctx
+   -> global_ctx
+   -> ftv Ast_core.Choreo.M.pattern
+   -> choreo_subst * ftv Ast_core.Choreo.M.typ * choreo_ctx *)
 
 val infer_choreo_stmt
   :  choreo_ctx
