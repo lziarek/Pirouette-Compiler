@@ -1,16 +1,15 @@
 FILE := $(word 2, $(MAKECMDGOALS))
-LATEX_DOCS := $(wildcard docs/*.tex)
+LATEX_DOCS := $(shell find docs -name '*.tex')
 
 .PHONY: build docs pp json dot test-pp bisect-pp clean cleandoc cleanall
 
 build:
 	dune build
 
-docs: 
-	for file in $(LATEX_DOCS); do \
-		pdflatex -output-directory=docs $$file; \
+docs: $(LATEX_DOCS)
+	@for file in $^; do \
+		pdflatex -output-directory=$$(dirname $$file) $$file; \
 	done
-
 pp:
 	dune exec pirc -- -pprint $(FILE)
 
@@ -20,6 +19,9 @@ json:
 dot: 
 	dune exec pirc -- -dot $(FILE)
 
+test-infer: cleanall
+	dune exec test/typcheck_test.exe
+
 test-pp: cleanall
 	dune exec test/prettyprint_test.exe
 
@@ -27,14 +29,14 @@ bisect-pp: cleanall
 	dune exec --instrument-with bisect_ppx test/prettyprint_test.exe
 	bisect-ppx-report html
 
-clean:
+cleandocs:
+	rm -rf $(shell find docs -name '*.aux' -o -name '*.log' -o -name '*.out')
+
+clean: cleandocs
 	dune clean
 
-cleandoc:
-	rm -rf docs/*.aux docs/*.log docs/*.out
-
-cleanall: clean cleandoc
-	rm -rf _build _coverage bisect*.coverage docs/*.pdf
+cleanall: clean
+	rm -rf _build _coverage bisect*.coverage $(shell find docs -name '*.pdf')
 
 %:
 	@:
