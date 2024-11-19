@@ -423,35 +423,56 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
         , t'
         , m ) )
   | Choreo.Match (e, cases, _) ->
-    let s1, t_match = infer_choreo_expr choreo_ctx global_ctx e in
-    let pats, exprs = List.split cases in
-    let s2, ts, ctxs =
+    (*infer cases*)
+    let patt_ls, expr_ls = List.split cases in
+    (*infer patterns to get list of each subst, each types, each ctx*)
+    let ls =
+      List.map (fun patt -> infer_choreo_pattern choreo_ctx global_ctx patt) patt_ls
+    in
+    let s1, t_ls, ctx_ls =
       List.fold_right
-        (fun pat (s_acc, t_acc, ctx_acc) ->
-          let s, t, c = infer_choreo_pattern choreo_ctx global_ctx pat in
-          s @ s_acc, t :: t_acc, c :: ctx_acc)
-        pats
+        (fun (s, t, ctx) (s_acc, t_acc, ctx_acc) -> s @ s_acc, t :: t_acc, ctx :: ctx_acc)
+        ls
         ([], [], [])
     in
-    let s3 =
-      List.fold_right
-        (fun t acc -> unify_choreo t t_match @ acc)
-        (List.map (apply_subst_typ_choreo s2) ts)
-        []
-    in
-    let s4, types =
-      List.fold_right2
-        (fun expr ctx (s_acc, t_acc) ->
-          let s, t = infer_choreo_expr (ctx @ choreo_ctx) global_ctx expr in
-          s @ s_acc, t :: t_acc)
-        exprs
-        ctxs
-        ([], [])
-    in
-    let s5 =
-      List.fold_left (fun acc t -> unify_choreo t (List.hd types) @ acc) [] types
-    in
-    s1 @ s2 @ s3 @ s4 @ s5, apply_subst_typ_choreo s5 (List.hd types)
+    (* for each type, apply subst to rewrite the types*)
+    let t_ls' = List.map (apply_subst_typ_choreo s1) t_ls in
+    (match t_ls', e with
+     (*fuse types of patterns to get type of e*)
+     | ( [ Choreo.TSum (t1, Choreo.TLoc _, _); Choreo.TSum (Choreo.TLoc _, t2, _) ]
+       , Choreo.Var (Local.VarId (e_name, _), _) )
+     | ( [ Choreo.TSum (Choreo.TLoc _, t2, _); Choreo.TSum (t1, Choreo.TLoc _, _) ]
+       , Choreo.Var (Local.VarId (e_name, _), _) ) ->
+       let t_match = Choreo.TSum (t1, t2, m) in
+       (*add the type binding into ctx so sub expr know the type of e*)
+       let choreo_ctx' = (e_name, t_match) :: choreo_ctx in
+       (*for each sub exprs, infer it with contexts from each patterns*)
+       (*apply, unify, return typ of expr*)
+       (*also check if type mismatch during list of patterns and exprs*)
+       (*infer each sub expr by each ctx@local_ctx, get a list of substs with list of types*)
+       let s2, typ_ls =
+         List.fold_right
+           (fun (expr, ctx) (s_acc, typ_acc) ->
+             let s, typ =
+               infer_choreo_expr
+                 (apply_subst_ctx_choreo s1 ctx @ choreo_ctx')
+                 global_ctx
+                 expr
+             in
+             s @ s_acc, typ :: typ_acc)
+           (List.combine expr_ls ctx_ls)
+           ([], [])
+       in
+       let typ_ls' = List.map (apply_subst_typ_choreo s2) typ_ls in
+       (*if all the sub expression return the same type, unify them and return*)
+       if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
+       then (
+         let s3 =
+           List.fold_left (fun acc t -> unify_choreo t (List.hd typ_ls') @ acc) [] typ_ls'
+         in
+         s1 @ s2 @ s3, List.hd typ_ls')
+       else failwith "Type of sub exprs mismatch"
+     | _ -> failwith "Type of patterns are not sum types")
 
 and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.Default _ -> [], Choreo.TUnit m, []
