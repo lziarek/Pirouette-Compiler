@@ -276,20 +276,46 @@ and infer_local_pattern local_ctx = function
 
 (* ============================== Choreo ============================== *)
 
-let rec infer_choreo_stmt choreo_ctx global_ctx stmt : choreo_subst * ftv Choreo.typ * choreo_ctx =
+let rec infer_choreo_stmt choreo_ctx global_ctx stmt
+  : choreo_subst * ftv Choreo.typ * choreo_ctx
+  =
   match stmt with
-  | Choreo.Decl (pattn, choreo_typ, _) -> 
-    (*let x : Alice.int*) (*infer pattern type of x, then bind it to Alice, add it to choreo ctx, and return it
-    should be Var *)
-    let s,t,ctx = infer_choreo_pattern choreo_ctx global_ctx pattn in 
-    let t' = apply_subst_typ_choreo s t in
-    (match t' with 
-    )
-    s, t', ctx
-  | Choreo.Assign (pattn_ls, expr, _) -> infer_choreo_expr choreo_ctx global_ctx expr
-  | Choreo.TypeDecl (TypId (id, _), choreo_typ, _) -> failwith "Not implemented"
+  | Choreo.Decl (pattn, choreo_typ, _) ->
+    (match pattn with
+     | Choreo.Var (Local.VarId (var_name, _), _) ->
+       [], choreo_typ, (var_name, choreo_typ) :: choreo_ctx
+     | _ -> failwith "Pattern mismatch")
+  | Choreo.Assign (pattn_ls, expr, _) ->
+    let s1, t_list, ctx_list =
+      List.fold_right
+        (fun pat (s_acc, t_acc, ctx_acc) ->
+          let s, t, ctx = infer_choreo_pattern choreo_ctx global_ctx pat in
+          s @ s_acc, t :: t_acc, ctx @ ctx_acc)
+        pattn_ls
+        ([], [], [])
+    in
+    let t_list' = List.map (fun t -> apply_subst_typ_choreo s1 t) t_list in
+    let s2, t1 = infer_choreo_expr (ctx_list @ choreo_ctx) global_ctx expr in
+    let t1' = apply_subst_typ_choreo s2 t1 in
+    (*unify expression type with each pattern type*)
+    let s3 =
+      List.fold_left
+        (fun acc t -> unify_choreo t t1' @ acc)
+        []
+        (List.map (apply_subst_typ_choreo s2) t_list')
+    in
+    s1 @ s2 @ s3, t1, ctx_list @ choreo_ctx
+  | Choreo.TypeDecl (typ_id, choreo_typ, _) -> failwith "Not implemented"
 
-and infer_choreo_stmt_block _stmts = failwith "Not implemented"
+and infer_choreo_stmt_block choreo_ctx global_ctx stmts
+  : choreo_subst * ftv Choreo.typ * choreo_ctx
+  =
+  List.fold_left
+    (fun (s_acc, _, ctx_acc) stmt ->
+      let s, t, ctx = infer_choreo_stmt ctx_acc global_ctx stmt in
+      s @ s_acc, t, ctx)
+    ([], Choreo.TUnit m, choreo_ctx)
+    stmts
 
 and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
   | Choreo.Unit _ -> [], Choreo.TUnit m
@@ -330,9 +356,11 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
        s_cond @ s1 @ s2 @ s3, apply_subst_typ_choreo s3 t2
      | _ -> failwith "Expected boolean type")
   | Choreo.Let (stmts, e, _) ->
-    let s1, t1 = infer_choreo_stmt_block stmts in
-    let s2, t2 = infer_choreo_expr (apply_subst_ctx_choreo s1 choreo_ctx) global_ctx e in
-    s1 @ s2, apply_subst_typ_choreo s2 t1
+    let s1, _, ctx1 = infer_choreo_stmt_block choreo_ctx global_ctx stmts in
+    let ctx' = apply_subst_ctx_choreo s1 (ctx1 @ choreo_ctx) in
+    let s2, t = infer_choreo_expr ctx' global_ctx e in
+    let t' = apply_subst_typ_choreo s2 t in
+    s1 @ s2, t'
   | Choreo.FunDef (patterns, e, _) ->
     let s1, t1s, ctx =
       List.fold_right
