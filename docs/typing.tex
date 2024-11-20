@@ -10,8 +10,13 @@
 \usepackage[draft]{fixme}  % change [draft] to [final] to hide fixme notes
 \usepackage[backend=biber,style=numeric,sorting=none]{biblatex} % bibliography, install biber otherwise it will not work
 \addbibresource{typing.bib}
-\usepackage[colorlinks=true, linkcolor=cyan, urlcolor=blue]{hyperref}
+\usepackage[colorlinks=true, linkcolor=cyan, citecolor=cyan, urlcolor=blue]{hyperref}
 
+
+\DefineBibliographyStrings{english}{
+    % add bibliography page to table of contents
+    bibliography = {References},
+}
 
 
 \title{Pirouette - Type Inference}
@@ -26,6 +31,8 @@
 \listoffixmes{} % list of fixme notes that need to be fixed in the doc
 
 \section{Background}
+
+\subsection{Introduction of Type Inference}
 
     \paragraph{}
         Type inference is the process of automatically deducing the types of expressions in a program.
@@ -51,7 +58,7 @@
         The way to solve these constraints is to use the \textit{unification algorithm}.
 
     \paragraph{}
-        Consider the following code snippet from the NEU lecture note\footfullcite{NEU1}:
+        Consider the following code snippet from the lecture note of Northeastern University\cite{NEU1}:
         \begin{verbatim}
             def f(x) := 
                 x + 6
@@ -72,18 +79,52 @@
         and the return type of the function application is the return type of the function, which is \texttt{int}.
 
     \paragraph{}
-        There are some other recourses that may help understanding the unification algorithm and the type inference process\footfullcite{Cornell} \footfullcite{Blog} \footfullcite{NEU2}.
-        \fxnote{Add more explanation for each reference}
+        There are some other resources that may help in understanding the unification algorithm and the type inference process.
+        The note from Cornell\cite{Cornell} provides an explanation of the type inference process,
+        the terms used in Cornell note are not the same as the terms used in this note, but it gives the general idea of how unification and substitution work.
+        The cornerstone of our implementation of the unification algorithm is another note from Northeastern University\cite{NEU2}.
+        We follow the formal rules for the unification, generation, and solution of the substitution, which are given in Section 3 of the note.
+        If the above resources are confusing, this blog post\cite{TypInferBlog} provides a more intuitive explanation of type inference.
+        The good thing is that the blog post uses the Abstract Syntax Tree $(AST)$\cite{ASTBlog} to represent the program,
+        which is the same as our implementation, it may help to understand the type inference process by visualizing the $AST$.
+        Also we would like to refactor our code to annotate the nodes in the $AST$ with types, it is more intuitive to understand
+        the process of type annotation by bottom-up traversal of the $AST$. This blog post also talks a bit about inferring polymorphic types,
+        which is one of the goals of this type inference library.
 
-        \newpage % end of section
+\subsection{understanding The Type System}
+    \fxnote{Add the explaination of how to read the type system}
+    Consider the following example:
+
+    \[
+        \inferrule [ Loc - binop mat ]
+        { \Gamma \vdash e_1 : int \quad \Gamma \vdash e_2 : int \quad \odot \in \{+,-,\times, /\}}
+        { \Gamma \vdash e_1 \odot e_2 : int} \and
+    \]
+
+    \newpage % end of section
 
 
 \section{Details}
 \subsection{Type definition}
     \begin{itemize}
-        \item \textbf{Typvar}: A type variable is a placeholder for a type that we don't know yet. We use type variables to represent unknown types in our type inference process.
-        \item \textbf{Local\_subst \& Choreo\_subst}: A substitution is a mapping from type variables to types. We use substitutions to represent the constraints on the types of expressions. The example of a local substitution is \texttt{[(T1, int), (T2, int -> int)]}.
-        \item \textbf{Local\_ctx \& Choreo\_ctx \& Global\_ctx}: A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program. The example of a local context is \texttt{[(foo, int), (bar, bool)]}. The global context is the context that stores the type bindings of all the variables including different locations in the program. The example of a global context is \texttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
+        \item \textbf{Typvar} \\
+              A type variable is a placeholder for a type that we don't know yet. We use type variables to represent unknown types in our type inference process.
+        \item \textbf{Local\_subst \& Choreo\_subst} \\
+              A substitution is a mapping from type variables to types. We use substitutions to represent the constraints on the types of expressions. The example of a local substitution is \texttt{[(T1, int), (T2, int -> int)]}.
+        \item \textbf{Local\_ctx \& Choreo\_ctx \& Global\_ctx} \\
+              A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program. The example of a local context is \texttt{[(foo, int), (bar, bool)]}. The global context is the context that stores the type bindings of all the variables including different locations in the program. The example of a global context is \texttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
+    \end{itemize}
+
+\subsection{Auxiliary Functions}
+    \fxnote{Add the explaination of the auxiliary functions}
+    \begin{itemize}
+        \item \textbf{add\_binding} \texttt{: (`a * `b) list $\to$ `a $\to$ `b $\to$ (`a * `b) list} \\
+              Generates a fresh type variable.
+        \item \textbf{ctx\_lookup} \texttt{: (`a * `b) list $\to$ `a $\to$ (`b * typvar) result} \\
+              Looks up a variable in the context and returns the type binding of the variable.
+        \item \textbf{extract\_local\_ctx}
+        \item \textbf{gen\_ftv}
+        \item \textbf{etc.}
     \end{itemize}
 
 \subsection{Type inference for Local Language}
@@ -98,22 +139,9 @@
 
 \section{Appendices}
     \begin{appendices}
-        \renewcommand{\thesection}{Appendix \Alph{section}}
+        \renewcommand{\thesubsection}{Appendix \Alph{subsection}}
 
-        \section{How To Read The Type System}\label{appendix:read_typ}
-            \fxnote{Add the explaination of how to read the type system}
-            Consider the following example:
-
-            \[
-                \inferrule [ Loc - binop mat ]
-                { \Gamma \vdash e_1 : int \quad \Gamma \vdash e_2 : int \quad \odot \in \{+,-,\times, /\}}
-                { \Gamma \vdash e_1 \odot e_2 : int} \and
-            \]
-
-            \newpage % end of section
-
-
-        \section{Type System for Local Language}\label{appendix:local_typ}
+        \subsection{Type System for Local Language}\label{appendix:local_typ}
             \begin{mathpar}
                 \inferrule [ Loc - unit ]
                 { \; }
@@ -156,7 +184,7 @@
             \newpage % end of section
 
 
-        \section{Type System for Choreography}\label{appendix:choreo_typ}
+        \subsection{Type System for Choreography}\label{appendix:choreo_typ}
             \begin{mathpar}
                 \inferrule [ unit ]
                 { \; }
@@ -208,5 +236,8 @@
             \newpage % end of section
 
     \end{appendices}
+
+
+    \printbibliography[heading=bibintoc]
 
 \end{document}
