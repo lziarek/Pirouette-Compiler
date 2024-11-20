@@ -1,15 +1,25 @@
 FILE := $(word 2, $(MAKECMDGOALS))
 LATEX_DOCS := $(shell find docs -name '*.tex')
 
-.PHONY: build docs pp json dot test-pp bisect-pp clean cleandoc cleanall
+.PHONY: build docs pp json dot test-infer test-pp bisect-pp clean cleandocs cleanall
 
 build:
 	dune build
 
 docs: $(LATEX_DOCS)
 	@for file in $^; do \
-		pdflatex -output-directory=$$(dirname $$file) $$file; \
+		base=$$(basename $$file .tex); \
+		dir=$$(dirname $$file); \
+		if [ -f "$${dir}/$$base.bib" ]; then \
+			pdflatex -output-directory=$$dir $$file; \
+			biber --input-directory $$dir --output-directory $$dir $$base; \
+			pdflatex -output-directory=$$dir $$file; \
+			pdflatex -output-directory=$$dir $$file; \
+		else \
+			pdflatex -output-directory=$$dir $$file; \
+		fi; \
 	done
+
 pp:
 	dune exec pirc -- -pprint $(FILE)
 
@@ -30,7 +40,9 @@ bisect-pp: cleanall
 	bisect-ppx-report html
 
 cleandocs:
-	rm -rf $(shell find docs -name '*.aux' -o -name '*.log' -o -name '*.out')
+	rm -rf $(shell find docs -name '*.aux' -o -name '*.log' -o -name '*.out' \
+	-o -name '*.bbl' -o -name '*.bcf' -o -name '*.blg' -o -name '*.run.xml' \
+	-o -name '*.lox' -o -name '*.toc')
 
 clean: cleandocs
 	dune clean

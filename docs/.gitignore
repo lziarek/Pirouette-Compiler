@@ -4,3 +4,14 @@
 *.log
 *.fdb_latexmk
 *.pdf
+*.out
+*.toc
+
+# bibliography file
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+
+# marco fixme notes
+*.lox

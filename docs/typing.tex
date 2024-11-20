@@ -1,0 +1,212 @@
+\documentclass{article}
+% \documentclass{notes}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{pl-syntax/pl-syntax}
+\usepackage{mathpartir}
+\usepackage{stmaryrd}
+\usepackage{appendix}
+\usepackage[draft]{fixme}  % change [draft] to [final] to hide fixme notes
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex} % bibliography, install biber otherwise it will not work
+\addbibresource{typing.bib}
+\usepackage[colorlinks=true, linkcolor=cyan, urlcolor=blue]{hyperref}
+
+
+
+\title{Pirouette - Type Inference}
+\author{\textbf{Alex Kim} \and \textbf{Vincent Chan}}
+\date{November 2024}
+
+
+\begin{document}
+
+\maketitle
+
+\listoffixmes{} % list of fixme notes that need to be fixed in the doc
+
+\section{Background}
+
+    \paragraph{}
+        Type inference is the process of automatically deducing the types of expressions in a program.
+        For example, in the following code snippet, the type of the whole expression can be inferred to be \texttt{int}:
+        \begin{verbatim}
+            let x := 5 + 2 in
+                x + 3
+        \end{verbatim}
+
+    \paragraph{}
+        To get the type of \texttt{x}, we can infer the type of the expression \texttt{5 + 2}, and then assign that type to \texttt{x}.
+        To get the type of \texttt{5 + 2}, we can infer the type of \texttt{5} to be \texttt{int} and the type of \texttt{2} to be \texttt{int}
+        because they are both constants, and in our type scheme, we have the rule that the type of \texttt{+} is \texttt{int -> int -> int}, so the type of \texttt{5 + 2} is \texttt{int}.
+        Therefore, the type of \texttt{x} is \texttt{int}, and the type of the whole expression of let binding is \texttt{int}. After the binding of \texttt{x:int}, we now examine the type of expression \texttt{x + 3},
+        we need to bring the type binding of \texttt{x} into the scope of the expression. The data structure that we use to store the type bindings \texttt{variable\_name:type} is called the \textit{context}.
+        Follow the same process as before, when we infer the function body \texttt{x + 3}, we know that the type of {+} is \texttt{int -> int -> int}, and the type of \texttt{3} is \texttt{int},
+        and since \texttt{x} is a variable, we look up the type of \texttt{x} in the context, and we find that the type of \texttt{x} is \texttt{int}, so the type of the whole expression is \texttt{int}.
+
+    \paragraph{}
+        But things can get more complicated when we have more complex expressions, such as function definition, function applications, and polymorphic types.
+        Because we may not know the type of a program yet, and we can certainly collect constraints on the types of expressions,
+        our approach to type inference is to collect constraints on the types of expressions, and then solve these constraints to get the type of the program.
+        The way to solve these constraints is to use the \textit{unification algorithm}.
+
+    \paragraph{}
+        Consider the following code snippet from the NEU lecture note\footfullcite{NEU1}:
+        \begin{verbatim}
+            def f(x) := 
+                x + 6
+
+            f 38
+        \end{verbatim}
+
+    \paragraph{}
+        At the beginning, we need to infer the type of the parameter \texttt{x} in the function \texttt{f}.
+        Since we don't know the type of \texttt{x} yet, we can assign a type variable \texttt{T1} to it, and add it into the context.
+        Then we go to function body \texttt{x + 6}, and we know that the type of \texttt{6} is \texttt{int}, since the type of \texttt{+} is \texttt{int -> int -> int},
+        and the type of \texttt{x} is \texttt{T1}, we unify our conclusion with the type \texttt{T1} to produce a constraint/substitution \texttt{T1 = int}, the return type of the function body
+        is the type of the last expression, which is \texttt{int}. Therefore, the type of the function \texttt{f} is \texttt{int -> int}.
+
+    \paragraph{}
+        When we infer the type of the function application \texttt{f 38}, we infer the type of the function \texttt{f} to be \texttt{int -> int}, and
+        the type of the argument \texttt{38} to be \texttt{int}, and we unify the type of the argument with the type of the parameter in the function type,
+        and the return type of the function application is the return type of the function, which is \texttt{int}.
+
+    \paragraph{}
+        There are some other recourses that may help understanding the unification algorithm and the type inference process\footfullcite{Cornell} \footfullcite{Blog} \footfullcite{NEU2}.
+        \fxnote{Add more explanation for each reference}
+
+        \newpage % end of section
+
+
+\section{Details}
+\subsection{Type definition}
+    \begin{itemize}
+        \item \textbf{Typvar}: A type variable is a placeholder for a type that we don't know yet. We use type variables to represent unknown types in our type inference process.
+        \item \textbf{Local\_subst \& Choreo\_subst}: A substitution is a mapping from type variables to types. We use substitutions to represent the constraints on the types of expressions. The example of a local substitution is \texttt{[(T1, int), (T2, int -> int)]}.
+        \item \textbf{Local\_ctx \& Choreo\_ctx \& Global\_ctx}: A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program. The example of a local context is \texttt{[(foo, int), (bar, bool)]}. The global context is the context that stores the type bindings of all the variables including different locations in the program. The example of a global context is \texttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
+    \end{itemize}
+
+\subsection{Type inference for Local Language}
+    The type system for the local language can be found in the \hyperref[appendix:local_typ]{Appendix B}.
+    \fxnote{Add the explaination of some of the cases for the local language}
+
+\subsection{Type inference for Choreographic Language}
+    The type system for the choreographic language can be found in the \hyperref[appendix:choreo_typ]{Appendix C}.
+    \fxnote{Add the explaination of some of the cases for the choreographic language}
+
+    \newpage % end of section
+
+\section{Appendices}
+    \begin{appendices}
+        \renewcommand{\thesection}{Appendix \Alph{section}}
+
+        \section{How To Read The Type System}\label{appendix:read_typ}
+            \fxnote{Add the explaination of how to read the type system}
+            Consider the following example:
+
+            \[
+                \inferrule [ Loc - binop mat ]
+                { \Gamma \vdash e_1 : int \quad \Gamma \vdash e_2 : int \quad \odot \in \{+,-,\times, /\}}
+                { \Gamma \vdash e_1 \odot e_2 : int} \and
+            \]
+
+            \newpage % end of section
+
+
+        \section{Type System for Local Language}\label{appendix:local_typ}
+            \begin{mathpar}
+                \inferrule [ Loc - unit ]
+                { \; }
+                { \Gamma \vdash \textsf{() : unit} } \and
+                \inferrule [ Loc - var ]
+                { x : t \in \Gamma }
+                { \Gamma \vdash x : t  } \and
+                \inferrule [ Loc - binop mat ]
+                { \Gamma \vdash e_1 : int \quad \Gamma \vdash e_2 : int \quad \odot \in \{+,-,\times, /\}}
+                { \Gamma \vdash e_1 \odot e_2 : int} \and
+                \inferrule [ Loc - binop comp ]
+                { \Gamma \vdash e_1 : int \quad \Gamma \vdash e_2 : int \quad \odot \in \{=, !=, <, >, <=, >=\}}
+                { \Gamma \vdash e_1 \odot e_2 : bool} \and
+                \inferrule [ Loc - binop bool ]
+                { \Gamma \vdash e_1 : bool \quad \Gamma \vdash e_2 : bool \quad \odot \in \{\& \&, \parallel\}}
+                { \Gamma \vdash e_1 \odot e_2 : bool} \and
+                \inferrule [ Loc - def ]
+                { \Gamma \vdash e_1 : t \quad \Gamma, x : t \vdash e_2 : t_2 }
+                { \Gamma ;\Delta \vdash \textsf{let}\ x := e_1 \ \textsf{in}\ e_2 : t_2  } \and
+                \inferrule [ Loc - pair ]
+                { \Gamma \vdash e_1 : t_1 \quad \Gamma \vdash e_2 : t_2}
+                { \Gamma \vdash (e_1, e_2) : t_1 \times t_2 } \\
+                \inferrule [ Loc - fst ]
+                { \Gamma \vdash e : t_1 \times t_2 }
+                { \Gamma \vdash \textsf{fst} \  e : t_1 } \and
+                \inferrule [ Loc - snd ]
+                { \Gamma \vdash e : t_1 \times t_2 }
+                { \Gamma \vdash \textsf{snd} \ e : t_2 } \\
+                \inferrule [ Loc - left ]
+                { \Gamma \vdash e_1 : t_1 }
+                { \Gamma \vdash \textsf{left} \ e_1 : t_1 + t_2 } \and
+                \inferrule [ Loc - right ]
+                { \Gamma \vdash e_2 : t_2 }
+                { \Gamma \vdash \textsf{right} \ e_2 : t_1 + t_2 } \and
+                \inferrule [ Loc - match ]
+                { \Gamma \vdash e : t_1+t_2 \quad \Gamma , \ x : t_1 \vdash e_1 : t_3 \quad \Gamma , \ y : t_2 \vdash e_2 : t_3  }
+                { \Gamma \vdash (\textsf{match e with left} \ x \Rightarrow e_1 ; \textsf{right} \ y \Rightarrow e_2) :t_3  }
+
+            \end{mathpar}
+            \newpage % end of section
+
+
+        \section{Type System for Choreography}\label{appendix:choreo_typ}
+            \begin{mathpar}
+                \inferrule [ unit ]
+                { \; }
+                { \Gamma ; \Delta \vdash \textsf{() : unit} } \and
+                \inferrule [ var ]
+                { X : \tau \in \Delta }
+                { \Gamma ;\Delta \vdash X : \tau } \and
+                \inferrule [ done ]
+                { \Gamma_{|\ell} \vdash e : t }
+                { \Gamma ; \Delta \vdash \ell.e : \ell.t } \and
+                \inferrule [ send ]
+                { \Gamma ; \Delta \vdash C : \ell.t}
+                { \Gamma;\Delta \vdash C \leadsto \ell_2 : \ell_2.t} \and
+                \inferrule [ sync ]
+                { \Gamma;\Delta \vdash C : \tau}
+                { \Gamma;\Delta \vdash \ell_1[d] \leadsto \ell_2 ; C : \tau} \and
+                \inferrule [ if ]
+                { \Gamma;\Delta \vdash C_1 : \ell.bool \quad \Gamma;\Delta\vdash C_2 : \tau_2 \quad \Gamma;\Delta \vdash C_3 : \tau_2 }
+                { \Gamma;\Delta \vdash \textsf{if } C_1 \textsf{ then } C_2 \textsf{ else } C_3: \tau_2  } \and
+                \inferrule [ def ]
+                { \Gamma;\Delta \vdash C_1 : \ell.t \quad \Gamma;\Delta, X : \ell.t \vdash C_2 : \tau_2 }
+                { \Gamma;\Delta \vdash \textsf{let } X = C_1 \textsf{ in } C_2 : \tau_2 } \and
+                \inferrule [ fun ]
+                { \Gamma ;\Delta , X : \tau_1, F : \tau_1 \to \tau_2\vdash C : \tau_2 }
+                { \Gamma ;\Delta \vdash \textsf{fun}\ F \ X \Rightarrow C : \tau_1 \to \tau_2  } \and
+                \inferrule [ app ]
+                { \Gamma;\Delta \vdash C_1 : \tau_1 \to \tau_2 \quad \Gamma;\Delta \vdash C_2 : \tau_1 }
+                { \Gamma;\Delta \vdash C_1 C_2 : \tau_2  } \and
+                \inferrule [ pair ]
+                { \Gamma ; \Delta \vdash C_1 : \tau_1 \quad \Gamma ; \Delta \vdash C_2 : \tau_2 }
+                { \Gamma ; \Delta \vdash (C_1, C_2) : \tau_1 \times \tau_2  } \and
+                \inferrule [ fst ]
+                { \Gamma ; \Delta \vdash C : \tau_1 \times \tau_2 }
+                { \Gamma ; \Delta \vdash \textsf{fst}\ C : \tau_1 } \and
+                \inferrule [ snd ]
+                { \Gamma ; \Delta \vdash C : \tau_1 \times \tau_2 }
+                { \Gamma ; \Delta \vdash \textsf{snd}\ C : \tau_2 } \\
+                \inferrule [ left ]
+                { \Gamma ; \Delta \vdash C : \tau_1 }
+                { \Gamma ; \Delta \vdash \textsf{left}\ C : \tau_1 + \tau_2 } \and
+                \inferrule [ right ]
+                { \Gamma ; \Delta \vdash C : \tau_2 }
+                { \Gamma ; \Delta \vdash \textsf{right}\ C : \tau_1 + \tau_2 } \and
+                \inferrule [ match ]
+                { \Gamma ; \Delta \vdash C : \tau_1+\tau_2 \quad \Gamma ; \Delta , X : \tau_1 \vdash C_1 : \tau_3 \quad \Gamma ; \Delta , Y : \tau_2 \vdash C_2 : \tau_3  }
+                { \Gamma ; \Delta \vdash (\textsf{match}\ C \ \textsf{with left}\ X \Rightarrow C_1 ; \textsf{right}\ Y \Rightarrow C_2) : \tau_3 }
+
+            \end{mathpar}
+            \newpage % end of section
+
+    \end{appendices}
+
+\end{document}
