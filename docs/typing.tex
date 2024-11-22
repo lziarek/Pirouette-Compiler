@@ -11,6 +11,8 @@
 \usepackage{indentfirst} % Indent the first paragraph of a section
 \usepackage{tikz} % Required for drawing the syntax tree
 \usepackage[draft]{fixme}  % change [draft] to [final] to hide fixme notes
+\usepackage{xcolor} % Required for the color
+\usepackage{soul} % Required for the highlight
 \usepackage[backend=biber,style=numeric,sorting=none]{biblatex} % bibliography, install biber otherwise it will not work
 \addbibresource{typing.bib} 
 \usepackage[colorlinks=true, linkcolor=cyan, citecolor=cyan, urlcolor=blue]{hyperref} % hyperlink
@@ -22,6 +24,11 @@
 }
 
 \setlength{\parskip}{1ex} % space between paragraphs
+
+\newcommand{\highlighttexttt}[2][black]{ % \backgroundtexttt[<color>]{<text>}, black in default
+  \sethlcolor{cyan!10} % set the background color
+  \texttt{\textcolor{#1}{\hl{#2}}}
+}
 
 
 \title{Pirouette - Type Inference}
@@ -105,7 +112,7 @@
     which is one of the goals of this type inference library.
 
 
-\subsection{The syntax of the language}
+\subsection{The Syntax of the Language}
     The syntax of Pirouette is divided into three parts: the local language, the choreographic language, and the network language.
     Here we just pick the binary operation expression from the local language as an example to show how to represent the language in syntax tree.
 
@@ -181,26 +188,71 @@
 \section{Details}
 \subsection{Type Definition}
     \begin{itemize}
-        \item \textbf{typvar} \\
+        \item \textbf{typvar} \texttt{: string}\\
               A type variable is a placeholder for a type that we don't know yet. We use type variables to represent unknown types in our type inference process.
-        \item \textbf{local\_subst \& choreo\_subst} \\
-              A substitution is a mapping from type variables to types. We use substitutions to represent the constraints on the types of expressions. The example of a local substitution is \texttt{[(T1, int), (T2, int -> int)]}.
-        \item \textbf{local\_ctx \& choreo\_ctx \& global\_ctx} \\
-              A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program. The example of a local context is \texttt{[(foo, int), (bar, bool)]}.
-              The global context is the context that stores the type bindings of all the variables including different locations in the program.
-              The example of a global context is \texttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
+        \item \textbf{local\_subst \& choreo\_subst} \\\texttt{: (typvar * Local.typ) list \& (typvar * Choreo.typ) list}\\
+              A substitution is a mapping from type variables to types. We use substitutions to represent the constraints on the types of expressions.
+              The example of a local substitution is \highlighttexttt{[(T1, int), (T2, int -> int)]}.
+        \item \textbf{local\_ctx \& choreo\_ctx} \\\texttt{: (string * Local.typ) list \& (striing * Choreo.typ) list}\\
+              A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program.
+              The example of a local context is \highlighttexttt{[(foo, int), (bar, bool)]}.
               The choreographic context is the context that stores the choreographic type bindings in the choreographic language.
+        \item \textbf{global\_ctx} \texttt{: (string * string * Local.typ) list}\\
+              The global context is the context that stores the type bindings of all the variables on different locations in the program.
+              The example of a global context is \highlighttexttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
     \end{itemize}
 
 \subsection{Auxiliary Functions}
     \fxnote{Add the explaination of the auxiliary functions}
     \begin{itemize}
-        \item \textbf{extract\_local\_ctx}
-        \item \textbf{get\_choreo\_ctx}
-        \item \textbf{gen\_ftv}
-        \item \textbf{occurs\_in}
-        \item \textbf{get\_choreo\_subst}
-        \item \textbf{unify\_local \& unify\_choreo}
+        \item \textbf{extract\_local\_ctx} \texttt{: global\_ctx -> string -> local\_ctx}\\
+              \highlighttexttt{extract\_local\_ctx global\_ctx loc} return the local context of location \highlighttexttt{loc} in the global context \highlighttexttt{global\_ctx}.
+              That is, \highlighttexttt{extract\_local\_ctx [\ldots; (A, foo, int); \ldots; (A, bar, string) \ldots] A = [(foo, int), (bar, string)]}.
+              Use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
+              to preserve the order of the context since the program update the context by adding the new type binding to the front of the context.
+        \item \textbf{get\_choreo\_subst} \texttt{: local\_subst -> Local.loc\_id -> choreo\_subst}\\
+              \highlighttexttt{get\_choreo\_subst local\_subst loc} return the choreographic substitution of location \highlighttexttt{loc}
+              by adding the location id \highlighttexttt{loc} to the type variables in the substitution \highlighttexttt{local\_subst}.
+              That is, \highlighttexttt{get\_choreo\_ctx [(T1, int -> int)] A = [(T1, (Choreo.TLoc (A), int -> int))]}.
+              Use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
+              to preserve the order of the context since the program update the context by adding the new type binding to the front of the substitution.
+        \item \textbf{get\_choreo\_ctx} \texttt{: local\_ctx -> Local.loc\_id -> choreo\_ctx}\\
+              \highlighttexttt{get\_choreo\_ctx local\_ctx loc} return the choreographic context of location \highlighttexttt{loc}
+              by adding the location id \highlighttexttt{loc} to the type variables in the context \highlighttexttt{local\_ctx}.
+              That is, \highlighttexttt{get\_choreo\_ctx [(foo, int)] A = [(foo, (Choreo.TLoc ((A), int)))]}.
+              Use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
+              to preserve the order of the context since the program update the context by adding the new type binding to the front of the context.
+        \item \textbf{gen\_ftv} \texttt{: unit -> typvar}\\
+              Return a fresh type variables of a type. The fresh type variables of a type are
+              the type variables that appear in the type but are not bound by the type.
+              This function is stateful because it increments the global reference counter each time it is called.
+        \item \textbf{occurs\_in} \texttt{: typvar -> Local.typ -> bool}\\
+              \highlighttexttt{occurs\_in t typ} return true if the type variable \highlighttexttt{t} occurs in the type \highlighttexttt{typ}.
+              That is, \highlighttexttt{occurs\_in T1 (int -> T1)} return \highlighttexttt[orange]{true}.
+              This function is used to check if the type variable occurs in the type, which is a necessary condition for the unification algorithm.
+              Consider unifying \highlighttexttt{T1} with \highlighttexttt{T1 -> T2}, since \highlighttexttt{T1} occurs in the type \highlighttexttt{T1 -> T2},
+              this is a self-referential type, it will be \highlighttexttt{T1 -> (T1 -> (T1 -> \ldots))}, which cause an infinite loop.
+              Therefore, unification will fail if the type variable occurs in the type.
+        \item \textbf{unify\_local \& unify\_choreo} \\
+              \texttt{: Local.typ -> Local.typ -> local\_subst \&\\
+                  Choreo.typ -> Choreo.typ -> choreo\_subst}\\
+              \highlighttexttt{unify\_local typ1 typ2 subst} return the substitution that unifies the type \highlighttexttt{typ1} with the type \highlighttexttt{typ2}
+              and return the result substitution \highlighttexttt{subst}.
+
+              The logic of the local unification algorithm is as follows:
+              \begin{itemize}
+                  \item If the two types are the same, return the empty substitution.
+                  \item If one of the types is a type variable, check if they are the same,
+                        if they are the same, return the empty substitution, otherwise,
+                        check if the type variable occurs in the other type, if it does, the unification fails,
+                        otherwise, return the substitution that binds the type variable to the other type.
+                  \item If both types are product/tuple types or sum types, unify the element types.
+                  \item If the above conditions are not met, the unification fails.
+              \end{itemize}
+
+              The functionality of \highlighttexttt{unify\_choreo} is the same as \highlighttexttt{unify\_local}, 
+              the only difference is that the \highlighttexttt{unify\_choreo} can handle the choreographic 
+              \highlighttexttt{TMaps} type which is used to represent the type of the function.
         \item \textbf{apply\_subst\_typ\_local \& apply\_subst\_typ\_choreo}
         \item \textbf{apply\_subst\_ctx\_local \& apply\_subst\_ctx\_choreo}
     \end{itemize}
