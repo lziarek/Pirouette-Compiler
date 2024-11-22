@@ -1,22 +1,26 @@
 \documentclass{article}
 % \documentclass{notes}
-\usepackage{graphicx} % Required for inserting images
-\usepackage{amsmath}
-\usepackage{amsfonts}
-\usepackage{pl-syntax/pl-syntax}
-\usepackage{mathpartir}
+% \usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath} % Required for some math elements
+\usepackage{amsfonts} 
+\usepackage{pl-syntax/pl-syntax} 
+\usepackage{mathpartir} % Required for the math environment
 \usepackage{stmaryrd}
-\usepackage{appendix}
+\usepackage{appendix} % Required for the appendices
+\usepackage{adjustbox} % Used to center the code snippets
+\usepackage{indentfirst} % Indent the first paragraph of a section
 \usepackage[draft]{fixme}  % change [draft] to [final] to hide fixme notes
 \usepackage[backend=biber,style=numeric,sorting=none]{biblatex} % bibliography, install biber otherwise it will not work
-\addbibresource{typing.bib}
-\usepackage[colorlinks=true, linkcolor=cyan, citecolor=cyan, urlcolor=blue]{hyperref}
+\addbibresource{typing.bib} 
+\usepackage[colorlinks=true, linkcolor=cyan, citecolor=cyan, urlcolor=blue]{hyperref} % hyperlink
 
 
 \DefineBibliographyStrings{english}{
     % add bibliography page to table of contents
     bibliography = {References},
 }
+
+\setlength{\parskip}{1em} % space between paragraphs
 
 
 \title{Pirouette - Type Inference}
@@ -33,66 +37,75 @@
 \section{Background}
 
 \subsection{Introduction of Type Inference}
+    Type inference is the process of automatically deducing the types of expressions in a program.
+    For example, in the following code snippet, the type of the whole expression can be inferred to be \texttt{int}:
 
-    \paragraph{}
-        Type inference is the process of automatically deducing the types of expressions in a program.
-        For example, in the following code snippet, the type of the whole expression can be inferred to be \texttt{int}:
-        \begin{verbatim}
-            let x := 5 + 2 in
-                x + 3
-        \end{verbatim}
+    \begin{center}
+        \setlength{\fboxsep}{5pt}
+        \adjustbox{valign=t,margin=1em,center}{
+            \begin{minipage}{1\textwidth}
+                \begin{verbatim}
+                        let x := 5 + 2 in
+                            x + 3
+                    \end{verbatim}
+            \end{minipage}
+        }
+    \end{center}
 
-    \paragraph{}
-        To get the type of \texttt{x}, we can infer the type of the expression \texttt{5 + 2}, and then assign that type to \texttt{x}.
-        To get the type of \texttt{5 + 2}, we can infer the type of \texttt{5} to be \texttt{int} and the type of \texttt{2} to be \texttt{int}
-        because they are both constants, and in our type scheme, we have the rule that the type of \texttt{+} is \texttt{int -> int -> int}, so the type of \texttt{5 + 2} is \texttt{int}.
-        Therefore, the type of \texttt{x} is \texttt{int}, and the type of the whole expression of let binding is \texttt{int}. After the binding of \texttt{x:int}, we now examine the type of expression \texttt{x + 3},
-        we need to bring the type binding of \texttt{x} into the scope of the expression. The data structure that we use to store the type bindings \texttt{variable\_name:type} is called the \textit{context}.
-        Follow the same process as before, when we infer the function body \texttt{x + 3}, we know that the type of {+} is \texttt{int -> int -> int}, and the type of \texttt{3} is \texttt{int},
-        and since \texttt{x} is a variable, we look up the type of \texttt{x} in the context, and we find that the type of \texttt{x} is \texttt{int}, so the type of the whole expression is \texttt{int}.
+    To get the type of \texttt{x}, we can infer the type of the expression \texttt{5 + 2}, and then assign that type to \texttt{x}.
+    To get the type of \texttt{5 + 2}, we can infer the type of \texttt{5} to be \texttt{int} and the type of \texttt{2} to be \texttt{int}
+    because they are both constants, and in our type scheme, we have the rule that the type of \texttt{+} is \texttt{int -> int -> int}, so the type of \texttt{5 + 2} is \texttt{int}.
+    Therefore, the type of \texttt{x} is \texttt{int}, and the type of the whole expression of let binding is \texttt{int}. After the binding of \texttt{x:int}, we now examine the type of expression \texttt{x + 3},
+    we need to bring the type binding of \texttt{x} into the scope of the expression. The data structure that we use to store the type bindings \texttt{variable\_name:type} is called the \textit{context}.
+    Follow the same process as before, when we infer the function body \texttt{x + 3}, we know that the type of {+} is \texttt{int -> int -> int}, and the type of \texttt{3} is \texttt{int},
+    and since \texttt{x} is a variable, we look up the type of \texttt{x} in the context, and we find that the type of \texttt{x} is \texttt{int}, so the type of the whole expression is \texttt{int}.
 
-    \paragraph{}
-        But things can get more complicated when we have more complex expressions, such as function definition, function applications, and polymorphic types.
-        Because we may not know the type of a program yet, and we can certainly collect constraints on the types of expressions,
-        our approach to type inference is to collect constraints on the types of expressions, and then solve these constraints to get the type of the program.
-        The way to solve these constraints is to use the \textit{unification algorithm}.
+    But things can get more complicated when we have more complex expressions, such as function definition, function applications, and polymorphic types.
+    Because we may not know the type of a program yet, and we can certainly collect constraints on the types of expressions,
+    our approach to type inference is to collect constraints on the types of expressions, and then solve these constraints to get the type of the program.
+    The way to solve these constraints is to use the \textit{unification algorithm}.
 
-    \paragraph{}
-        Consider the following code snippet from the lecture note of Northeastern University\cite{NEU1}:
-        \begin{verbatim}
-            def f(x) := 
-                x + 6
+    Consider the following code snippet from the lecture note of Northeastern University\cite{NEU1}:
 
-            f 38
-        \end{verbatim}
+    \begin{center}
+        \setlength{\fboxsep}{5pt}
+        \adjustbox{valign=t,margin=1em,center}{
+            \begin{minipage}{0.9\textwidth}
+                \begin{verbatim}
+                        def f(x) := 
+                            x + 6
 
-    \paragraph{}
-        At the beginning, we need to infer the type of the parameter \texttt{x} in the function \texttt{f}.
-        Since we don't know the type of \texttt{x} yet, we can assign a type variable \texttt{T1} to it, and add it into the context.
-        Then we go to function body \texttt{x + 6}, and we know that the type of \texttt{6} is \texttt{int}, since the type of \texttt{+} is \texttt{int -> int -> int},
-        and the type of \texttt{x} is \texttt{T1}, we unify our conclusion with the type \texttt{T1} to produce a constraint/substitution \texttt{T1 = int}, the return type of the function body
-        is the type of the last expression, which is \texttt{int}. Therefore, the type of the function \texttt{f} is \texttt{int -> int}.
+                        f 38
+                    \end{verbatim}
+            \end{minipage}
+        }
+    \end{center}
 
-    \paragraph{}
-        When we infer the type of the function application \texttt{f 38}, we infer the type of the function \texttt{f} to be \texttt{int -> int}, and
-        the type of the argument \texttt{38} to be \texttt{int}, and we unify the type of the argument with the type of the parameter in the function type,
-        and the return type of the function application is the return type of the function, which is \texttt{int}.
+    At the beginning, we need to infer the type of the parameter \texttt{x} in the function \texttt{f}.
+    Since we don't know the type of \texttt{x} yet, we can assign a type variable \texttt{T1} to it, and add it into the context.
+    Then we go to function body \texttt{x + 6}, and we know that the type of \texttt{6} is \texttt{int}, since the type of \texttt{+} is \texttt{int -> int -> int},
+    and the type of \texttt{x} is \texttt{T1}, we unify our conclusion with the type \texttt{T1} to produce a constraint/substitution \texttt{T1 = int}, the return type of the function body
+    is the type of the last expression, which is \texttt{int}. Therefore, the type of the function \texttt{f} is \texttt{int -> int}.
 
-    \paragraph{}
-        There are some other resources that may help in understanding the unification algorithm and the type inference process.
-        The note from Cornell\cite{Cornell} provides an explanation of the type inference process,
-        the terms used in Cornell note are not the same as the terms used in this note, but it gives the general idea of how unification and substitution work.
-        The cornerstone of our implementation of the unification algorithm is another note from Northeastern University\cite{NEU2}.
-        We follow the formal rules for the unification, generation, and solution of the substitution, which are given in Section 3 of the note.
-        If the above resources are confusing, this blog post\cite{TypInferBlog} provides a more intuitive explanation of type inference.
-        The good thing is that the blog post uses the Abstract Syntax Tree $(AST)$\cite{ASTBlog} to represent the program,
-        which is the same as our implementation, it may help to understand the type inference process by visualizing the $AST$.
-        Also we would like to refactor our code to annotate the nodes in the $AST$ with types, it is more intuitive to understand
-        the process of type annotation by bottom-up traversal of the $AST$. This blog post also talks a bit about inferring polymorphic types,
-        which is one of the goals of this type inference library.
+    When we infer the type of the function application \texttt{f 38}, we infer the type of the function \texttt{f} to be \texttt{int -> int}, and
+    the type of the argument \texttt{38} to be \texttt{int}, and we unify the type of the argument with the type of the parameter in the function type,
+    and the return type of the function application is the return type of the function, which is \texttt{int}.
 
-\subsection{understanding The Type System}
-    \fxnote{Add the explaination of how to read the type system}
+    There are some other resources that may help in understanding the unification algorithm and the type inference process.
+    The note from Cornell\cite{Cornell} provides an explanation of the type inference process,
+    the terms used in Cornell note are not the same as the terms used in this note, but it gives the general idea of how unification and substitution work.
+    The cornerstone of our implementation of the unification algorithm is another note from Northeastern University\cite{NEU2}.
+    We follow the formal rules for the unification, generation, and solution of the substitution, which are given in Section 3 of the note.
+    If the above resources are confusing, this blog post\cite{TypInferBlog} provides a more intuitive explanation of type inference.
+    The good thing is that the blog post uses the Abstract Syntax Tree $(AST)$\cite{ASTBlog} to represent the program,
+    which is the same as our implementation, it may help to understand the type inference process by visualizing the $AST$.
+    Also we would like to refactor our code to annotate the nodes in the $AST$ with types, it is more intuitive to understand
+    the process of type annotation by bottom-up traversal of the $AST$. This blog post also talks a bit about inferring polymorphic types,
+    which is one of the goals of this type inference library.
+
+\subsection{Understanding the Type System}
+    The type system is a set of rules that define the types of expressions in the program.
+    The rules are written in the form of inference rules, which are a set of premises and a conclusion.
     Consider the following example:
 
     \[
@@ -101,11 +114,34 @@
         { \Gamma \vdash e_1 \odot e_2 : int} \and
     \]
 
+    The above rule is the rule for the binary operation of mathematical operators. Generally, the top line of the rule is the premise, and the bottom line is the conclusion.
+    The Gamma $\Gamma$ is the local context that stores the type bindings of local variables in the program (we use Delta $\Delta$ for choreographic context).
+    The turnstile $\vdash$ means that the type of the expression on the right-hand side of $\vdash$ can be inferred from the context on the left-hand side of $\vdash$.
+    So, in the premise of the binop rule, if we infer the type of the left-hand side expression $e_1$ and the right-hand side expression $e_2$ to be \texttt{int} from the context $\Gamma$,
+    and the operator $\odot$ is one of these four mathematical operators, then in the conclusion of the rule, we can infer the type of the whole expression
+    $e_1 \odot e_2$ to be \texttt{int} from the context $\Gamma$.
+
+    Consider another example:
+
+    \[
+        \inferrule [ Loc - def ]
+        { \Gamma \vdash e_1 : t \quad \Gamma, x : t \vdash e_2 : t_2 }
+        { \Gamma \vdash \textsf{let}\ x := e_1 \ \textsf{in}\ e_2 : t_2  } \and
+    \]
+
+    The above rule is the rule for the let binding expression. The let binding expression is used to bind a value to a variable name,
+    and then use the variable in the expression that follows the \texttt{in} keyword.
+    In terms of the scoping, the variable name $x$ is only available in the expression $e_2$.
+    In the premise, we first infer the type of the expression $e_1$ to be $t$ from the context $\Gamma$ first.
+    Then when we infer the type of the expression $e_2$, the $\Gamma, x:t$ means that we extend the context $\Gamma$ by adding the type binding $x:t$ to it,
+    so that we can access the type of $x$ in the expression $e_2$ by looking up the type of $x$ in the updated context $\Gamma, x:t$, and infer the type of $e_2$ to be $t_2$.
+    So in the conclusion of the rule, we can infer the type of the whole let binding expression to be $t_2$ from the context $\Gamma$.
+
     \newpage % end of section
 
 
 \section{Details}
-\subsection{Type definition}
+\subsection{Type Definition}
     \begin{itemize}
         \item \textbf{Typvar} \\
               A type variable is a placeholder for a type that we don't know yet. We use type variables to represent unknown types in our type inference process.
@@ -127,7 +163,7 @@
         \item \textbf{etc.}
     \end{itemize}
 
-\subsection{Type inference for Local Language}
+\subsection{Type Inference for Local Language}
     The type system for the local language can be found in the \hyperref[appendix:local_typ]{Appendix B}.
     \fxnote{Add the explaination of some of the cases for the local language}
 
@@ -160,7 +196,7 @@
                 { \Gamma \vdash e_1 \odot e_2 : bool} \and
                 \inferrule [ Loc - def ]
                 { \Gamma \vdash e_1 : t \quad \Gamma, x : t \vdash e_2 : t_2 }
-                { \Gamma ;\Delta \vdash \textsf{let}\ x := e_1 \ \textsf{in}\ e_2 : t_2  } \and
+                { \Gamma \vdash \textsf{let}\ x := e_1 \ \textsf{in}\ e_2 : t_2  } \and
                 \inferrule [ Loc - pair ]
                 { \Gamma \vdash e_1 : t_1 \quad \Gamma \vdash e_2 : t_2}
                 { \Gamma \vdash (e_1, e_2) : t_1 \times t_2 } \\
