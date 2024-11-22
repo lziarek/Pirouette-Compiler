@@ -151,7 +151,7 @@
 { \Gamma \vdash e_1 \odot e_2 : bool} \and
 \inferrule [ Loc - def ]
 { \Gamma \vdash e_1 : t \quad \Gamma, x : t \vdash e_2 : t_2 }
-{ \Gamma ;\Delta \vdash \textsf{let}\ x := e_1 \ \textsf{in}\ e_2 : t_2  } \and
+{ \Gamma \vdash \textsf{let}\ x := e_1 \ \textsf{in}\ e_2 : t_2  } \and
 \inferrule [ Loc - pair ]
 { \Gamma \vdash e_1 : t_1 \quad \Gamma \vdash e_2 : t_2}
 { \Gamma \vdash (e_1, e_2) : t_1 \times t_2 } \\
