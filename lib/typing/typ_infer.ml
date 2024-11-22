@@ -17,7 +17,7 @@ type global_ctx = (string * string * ftv Local.typ) list
 (*free type variables*)
 let (m : ftv) = Ok "dummy info"
 
-let rec unify t1 t2 : local_subst =
+let rec unify_local t1 t2 : local_subst =
   match t1, t2 with
   | Local.TInt _, Local.TInt _
   | Local.TBool _, Local.TBool _
@@ -32,12 +32,12 @@ let rec unify t1 t2 : local_subst =
     else [ var_name, t ]
   | Local.TProd (t1a, t1b, _), Local.TProd (t2a, t2b, _)
   | Local.TSum (t1a, t1b, _), Local.TSum (t2a, t2b, _) ->
-    let s1 = unify t1a t2a in
-    let s2 = unify (apply_subst_typ s1 t1b) (apply_subst_typ s1 t2b) in
+    let s1 = unify_local t1a t2a in
+    let s2 = unify_local (apply_subst_typ_local s1 t1b) (apply_subst_typ_local s1 t2b) in
     s1 @ s2
   | _ -> failwith "Unification failed"
 
-and unify_choreo (t1 : ftv Choreo.typ) (t2 : ftv Choreo.typ) : choreo_subst =
+and unify_choreo t1 t2 =
   match t1, t2 with
   | Choreo.TProd (t1a, t1b, _), Choreo.TProd (t2a, t2b, _)
   | Choreo.TSum (t1a, t1b, _), Choreo.TSum (t2a, t2b, _) ->
@@ -49,7 +49,7 @@ and unify_choreo (t1 : ftv Choreo.typ) (t2 : ftv Choreo.typ) : choreo_subst =
   | _ -> failwith "Unification failed"
 
 (* Apply substitution to a Choreo.typ *)
-and apply_subst_typ_choreo (s : choreo_subst) (t : ftv Choreo.typ) : ftv Choreo.typ =
+and apply_subst_typ_choreo s t =
   match t with
   | Choreo.TProd (t1, t2, _) ->
     Choreo.TProd (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
@@ -66,21 +66,26 @@ and occurs_in var_name t2 =
     occurs_in var_name t2a || occurs_in var_name t2b
 
 (*traverse the substitution list `s`, apply all occurences of subst to `t`*)
-and apply_subst_typ s t =
+and apply_subst_typ_local s t =
   match t with
   | (Local.TInt _ | Local.TBool _ | Local.TString _ | Local.TUnit _) as t' -> t'
   | Local.TVar (Local.TypId (var_name, _), _) ->
-    (try List.assoc var_name s with
-     | Not_found -> t)
-  | Local.TProd (t1, t2, _) -> Local.TProd (apply_subst_typ s t1, apply_subst_typ s t2, m)
-  | Local.TSum (t1, t2, _) -> Local.TSum (apply_subst_typ s t1, apply_subst_typ s t2, m)
+    (match List.assoc_opt var_name s with
+     | Some t' -> t'
+     | None -> t)
+  | Local.TProd (t1, t2, _) ->
+    Local.TProd (apply_subst_typ_local s t1, apply_subst_typ_local s t2, m)
+  | Local.TSum (t1, t2, _) ->
+    Local.TSum (apply_subst_typ_local s t1, apply_subst_typ_local s t2, m)
 
 (*apply substitution to context*)
-and apply_subst_ctx subst ctx =
-  List.map (fun (var_name, var_type) -> var_name, apply_subst_typ subst var_type) ctx
+and apply_subst_ctx_local subst ctx =
+  List.map
+    (fun (var_name, var_type) -> var_name, apply_subst_typ_local subst var_type)
+    ctx
 
 (*apply substitution to choreo context *)
-and apply_subst_ctx_choreo (subst : choreo_subst) (ctx : choreo_ctx) : choreo_ctx =
+and apply_subst_ctx_choreo subst ctx =
   List.map
     (fun (var_name, var_type) -> var_name, apply_subst_typ_choreo subst var_type)
     ctx
@@ -94,24 +99,15 @@ and gen_ftv =
     "T" ^ string_of_int v
 ;;
 
-(*add varname:vartype pair to context list*)
-let add_binding ctx var_name var_type = (var_name, var_type) :: ctx
-
-(*lookup varname in context list to get its binding*)
-(*return Result type*)
-and ctx_lookup ctx var_name =
-  try Ok (List.assoc var_name ctx) with
-  | Not_found -> Error "Variable not found"
-
 (*extract loc_id's local context from glocal context*)
-and extract_local_ctx (global_ctx : global_ctx) loc_id =
+let extract_local_ctx (global_ctx : global_ctx) loc_id =
   List.fold_right
     (fun (loc, var_name, typ) acc -> if loc = loc_id then (var_name, typ) :: acc else acc)
     global_ctx
     []
 
 (*return a choreo sub given local substitution and loc_id*)
-and get_choreo_sub local_subst loc_id =
+and get_choreo_subst local_subst loc_id =
   List.fold_right
     (fun (var_name, typ) acc -> (var_name, Choreo.TLoc (loc_id, typ, m)) :: acc)
     local_subst
@@ -131,79 +127,80 @@ let rec infer_local_expr local_ctx = function
   | Local.Unit _ -> [], Local.TUnit m
   | Local.Val (v, _) -> [], typeof_Val v
   | Local.Var (Local.VarId (var_name, _), _) ->
-    (match ctx_lookup local_ctx var_name with
-     | Ok t -> [], t
-     | _ -> failwith "Variable not found when inferring expression")
+    (match List.assoc_opt var_name local_ctx with
+     | Some t -> [], t
+     | None -> failwith "Variable not found when inferring expression")
   | Local.UnOp (op, e, _) ->
     (match op with
      | Local.Neg _ ->
        let s1, t = infer_local_expr local_ctx e in
-       let t' = apply_subst_typ s1 t in
-       let s2 = unify t' (Local.TInt m) in
+       let t' = apply_subst_typ_local s1 t in
+       let s2 = unify_local t' (Local.TInt m) in
        s1 @ s2, Local.TInt m
      | Local.Not _ ->
        let s1, t = infer_local_expr local_ctx e in
-       let t' = apply_subst_typ s1 t in
-       let s2 = unify t' (Local.TBool m) in
+       let t' = apply_subst_typ_local s1 t in
+       let s2 = unify_local t' (Local.TBool m) in
        s1 @ s2, Local.TBool m)
   | Local.BinOp (e1, op, e2, _) ->
     (match op with
      | Local.Plus _ | Local.Minus _ | Local.Times _ | Local.Div _ ->
        let s1, t1 = infer_local_expr local_ctx e1 in
-       let s2, t2 = infer_local_expr (apply_subst_ctx s1 local_ctx) e2 in
-       let t1' = apply_subst_typ s1 t1 in
-       let t2' = apply_subst_typ s2 t2 in
-       let s3 = unify t1' (Local.TInt m) in
-       let s4 = unify t2' (Local.TInt m) in
+       let s2, t2 = infer_local_expr (apply_subst_ctx_local s1 local_ctx) e2 in
+       let t1' = apply_subst_typ_local s1 t1 in
+       let t2' = apply_subst_typ_local s2 t2 in
+       let s3 = unify_local t1' (Local.TInt m) in
+       let s4 = unify_local t2' (Local.TInt m) in
        s1 @ s2 @ s3 @ s4, Local.TInt m
      | Local.Eq _ | Local.Neq _ | Local.Lt _ | Local.Leq _ | Local.Gt _ | Local.Geq _ ->
        let s1, t1 = infer_local_expr local_ctx e1 in
-       let s2, t2 = infer_local_expr (apply_subst_ctx s1 local_ctx) e2 in
-       let t1' = apply_subst_typ s1 t1 in
-       let t2' = apply_subst_typ s2 t2 in
-       let s3 = unify t1' (Local.TInt m) in
-       let s4 = unify t2' (Local.TInt m) in
+       let s2, t2 = infer_local_expr (apply_subst_ctx_local s1 local_ctx) e2 in
+       let t1' = apply_subst_typ_local s1 t1 in
+       let t2' = apply_subst_typ_local s2 t2 in
+       let s3 = unify_local t1' (Local.TInt m) in
+       let s4 = unify_local t2' (Local.TInt m) in
        s1 @ s2 @ s3 @ s4, Local.TBool m
      | Local.And _ | Local.Or _ ->
        let s1, t1 = infer_local_expr local_ctx e1 in
-       let s2, t2 = infer_local_expr (apply_subst_ctx s1 local_ctx) e2 in
-       let t1' = apply_subst_typ s1 t1 in
-       let t2' = apply_subst_typ s2 t2 in
-       let s3 = unify t1' (Local.TBool m) in
-       let s4 = unify t2' (Local.TBool m) in
+       let s2, t2 = infer_local_expr (apply_subst_ctx_local s1 local_ctx) e2 in
+       let t1' = apply_subst_typ_local s1 t1 in
+       let t2' = apply_subst_typ_local s2 t2 in
+       let s3 = unify_local t1' (Local.TBool m) in
+       let s4 = unify_local t2' (Local.TBool m) in
        s1 @ s2 @ s3 @ s4, Local.TBool m)
   | Local.Let (Local.VarId (var_name, _), local_type, e1, e2, _) ->
     let s1, t1 = infer_local_expr local_ctx e1 in
     if t1 = local_type
     then (
-      let s2, t2 = infer_local_expr (add_binding local_ctx var_name local_type) e2 in
+      let s2, t2 = infer_local_expr ((var_name, local_type) :: local_ctx) e2 in
       s1 @ s2, t2)
     else failwith "Type annotation and actual type mismatch"
   | Local.Pair (e1, e2, _) ->
     let s1, t1 = infer_local_expr local_ctx e1 in
-    let s2, t2 = infer_local_expr (apply_subst_ctx s1 local_ctx) e2 in
+    let s2, t2 = infer_local_expr (apply_subst_ctx_local s1 local_ctx) e2 in
     let comb_subst = s1 @ s2 in
     ( comb_subst
-    , Local.TProd (apply_subst_typ comb_subst t1, apply_subst_typ comb_subst t2, m) )
+    , Local.TProd
+        (apply_subst_typ_local comb_subst t1, apply_subst_typ_local comb_subst t2, m) )
   | Local.Fst (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    let t' = apply_subst_typ s1 t in
+    let t' = apply_subst_typ_local s1 t in
     (match t' with
      | Local.TProd (t1, _, _) -> s1, t1
      | _ -> failwith "Fst Type error")
   | Local.Snd (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    let t' = apply_subst_typ s1 t in
+    let t' = apply_subst_typ_local s1 t in
     (match t' with
      | Local.TProd (_, t2, _) -> s1, t2
      | _ -> failwith "Snd Type error")
   | Local.Left (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    let t' = apply_subst_typ s1 t in
+    let t' = apply_subst_typ_local s1 t in
     s1, Local.TSum (t', Local.TVar (Local.TypId (gen_ftv (), m), m), m)
   | Local.Right (e, _) ->
     let s1, t = infer_local_expr local_ctx e in
-    let t' = apply_subst_typ s1 t in
+    let t' = apply_subst_typ_local s1 t in
     s1, Local.TSum (Local.TVar (Local.TypId (gen_ftv (), m), m), t', m)
   | Local.Match (e, cases, _) ->
     (*infer cases*)
@@ -217,7 +214,7 @@ let rec infer_local_expr local_ctx = function
         ([], [], [])
     in
     (* for each type, apply subst to rewrite the types*)
-    let t_ls' = List.map (fun t -> apply_subst_typ s1 t) t_ls in
+    let t_ls' = List.map (fun t -> apply_subst_typ_local s1 t) t_ls in
     (match t_ls', e with
      (*fuse types of patterns to get type of e*)
      | [ TSum (t1, TVar _, _); TSum (TVar _, t2, _) ], Var (Local.VarId (e_name, _), _)
@@ -232,17 +229,19 @@ let rec infer_local_expr local_ctx = function
        let s2, typ_ls =
          List.fold_right
            (fun (expr, ctx) (s_acc, typ_acc) ->
-             let s, typ = infer_local_expr (apply_subst_ctx s1 ctx @ local_ctx') expr in
+             let s, typ =
+               infer_local_expr (apply_subst_ctx_local s1 ctx @ local_ctx') expr
+             in
              s @ s_acc, typ :: typ_acc)
            (List.combine expr_ls ctx_ls)
            ([], [])
        in
-       let typ_ls' = List.map (fun t -> apply_subst_typ s2 t) typ_ls in
+       let typ_ls' = List.map (fun t -> apply_subst_typ_local s2 t) typ_ls in
        (*if all the sub expression return the same type, unify them and return*)
        if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
        then (
          let s3 =
-           List.fold_left (fun acc t -> unify t (List.hd typ_ls') @ acc) [] typ_ls'
+           List.fold_left (fun acc t -> unify_local t (List.hd typ_ls') @ acc) [] typ_ls'
          in
          s1 @ s2 @ s3, List.hd typ_ls')
        else failwith "Type of sub exprs mismatch"
@@ -261,10 +260,11 @@ and infer_local_pattern local_ctx = function
     [], typ_v, [ var_name, typ_v ]
   | Local.Pair (p1, p2, _) ->
     let s1, t1, ctx1 = infer_local_pattern local_ctx p1 in
-    let s2, t2, ctx2 = infer_local_pattern (apply_subst_ctx s1 local_ctx) p2 in
+    let s2, t2, ctx2 = infer_local_pattern (apply_subst_ctx_local s1 local_ctx) p2 in
     let comb_subst = s1 @ s2 in
     ( comb_subst
-    , Local.TProd (apply_subst_typ comb_subst t1, apply_subst_typ comb_subst t2, m)
+    , Local.TProd
+        (apply_subst_typ_local comb_subst t1, apply_subst_typ_local comb_subst t2, m)
     , ctx1 @ ctx2 )
   | Local.Left (p, _) ->
     let s, t, ctx = infer_local_pattern local_ctx p in
@@ -320,14 +320,14 @@ and infer_choreo_stmt_block choreo_ctx global_ctx stmts
 and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
   | Choreo.Unit _ -> [], Choreo.TUnit m
   | Choreo.Var (Local.VarId (var_name, _), _) ->
-    (match ctx_lookup choreo_ctx var_name with
-     | Ok t -> [], t
-     | _ -> failwith "Variable not found when inferring expression")
+    (match List.assoc_opt var_name choreo_ctx with
+     | Some t -> [], t
+     | None -> failwith "Variable not found when inferring expression")
   | Choreo.LocExpr (Local.LocId (loc_id, _), local_expr, _) ->
     let local_ctx = extract_local_ctx global_ctx loc_id in
     let local_s, t = infer_local_expr local_ctx local_expr in
-    let t' = apply_subst_typ local_s t in
-    let choreo_sub = get_choreo_sub local_s (Local.LocId (loc_id, m)) in
+    let t' = apply_subst_typ_local local_s t in
+    let choreo_sub = get_choreo_subst local_s (Local.LocId (loc_id, m)) in
     choreo_sub, Choreo.TLoc (Local.LocId (loc_id, m), t', m)
   | Choreo.Send (Local.LocId (src, _), e, Local.LocId (dst, _), _) ->
     let s1, t = infer_choreo_expr choreo_ctx global_ctx e in
@@ -492,8 +492,8 @@ and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.LocPat (Local.LocId (loc_id, _), local_pat, _) ->
     let local_ctx = extract_local_ctx global_ctx loc_id in
     let local_s, t, ctx = infer_local_pattern local_ctx local_pat in
-    let t' = apply_subst_typ local_s t in
-    let choreo_sub = get_choreo_sub local_s (Local.LocId (loc_id, m)) in
+    let t' = apply_subst_typ_local local_s t in
+    let choreo_sub = get_choreo_subst local_s (Local.LocId (loc_id, m)) in
     let choreo_ctx = get_choreo_ctx ctx (Local.LocId (loc_id, m)) in
     choreo_sub, Choreo.TLoc (Local.LocId (loc_id, m), t', m), choreo_ctx
   | Choreo.Left (p, _) ->
@@ -520,9 +520,9 @@ and infer_choreo_pattern choreo_ctx global_ctx = function
    | Local.Unit _ -> expected_typ = Local.TUnit m
    | Val (v, _) -> expected_typ = typeof_Val v
    | Var (VarId (var_name, _), _) ->
-   (match ctx_lookup ctx var_name with
-   | Ok t -> expected_typ = t
-   | _ -> false)
+   (match List.assoc_opt var_name ctx with
+   | Some t -> expected_typ = t
+   | None -> false)
    | UnOp (op, e, _) ->
    (match op with
    | Neg _ -> check_local_expr ctx (TInt m) e && expected_typ = TInt m
@@ -544,7 +544,7 @@ and infer_choreo_pattern choreo_ctx global_ctx = function
    | Let (VarId (var_name, _), local_type, e1, e2, _) ->
    (match check_local_expr ctx local_type e1 with
    | true ->
-   let ctx' = add_binding ctx var_name local_type in
+   let ctx' = List.cons (var_name, local_type) ctx in
    check_local_expr ctx' expected_typ e2
    | _ -> false)
    | Pair (e1, e2, _) ->
@@ -591,9 +591,9 @@ and infer_choreo_pattern choreo_ctx global_ctx = function
    and check_choreo_expr choreo_ctx global_ctx expected_typ = function
    | Unit _ -> expected_typ = Ast.Choreo.TUnit m
    | Var (VarId (var_name, _), _) ->
-   (match ctx_lookup choreo_ctx var_name with
-   | Ok t -> expected_typ = t
-   | _ -> false)
+   (match List.assoc_opt var_name choreo_ctx with
+   | Some t -> expected_typ = t
+   | None -> false)
    | LocExpr (LocId (loc_id, _), e, _) ->
    (match expected_typ with
    | TLoc (LocId (loc_id', _), local_typ, _) ->
