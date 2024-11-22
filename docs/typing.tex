@@ -9,6 +9,7 @@
 \usepackage{appendix} % Required for the appendices
 \usepackage{adjustbox} % Used to center the code snippets
 \usepackage{indentfirst} % Indent the first paragraph of a section
+\usepackage{tikz} % Required for drawing the syntax tree
 \usepackage[draft]{fixme}  % change [draft] to [final] to hide fixme notes
 \usepackage[backend=biber,style=numeric,sorting=none]{biblatex} % bibliography, install biber otherwise it will not work
 \addbibresource{typing.bib} 
@@ -20,7 +21,7 @@
     bibliography = {References},
 }
 
-\setlength{\parskip}{1em} % space between paragraphs
+\setlength{\parskip}{1ex} % space between paragraphs
 
 
 \title{Pirouette - Type Inference}
@@ -42,7 +43,7 @@
 
     \begin{center}
         \setlength{\fboxsep}{5pt}
-        \adjustbox{valign=t,margin=1em,center}{
+        \adjustbox{valign=t,margin=1ex,center}{
             \begin{minipage}{1\textwidth}
                 \begin{verbatim}
                         let x := 5 + 2 in
@@ -69,7 +70,7 @@
 
     \begin{center}
         \setlength{\fboxsep}{5pt}
-        \adjustbox{valign=t,margin=1em,center}{
+        \adjustbox{valign=t,margin=1ex,center}{
             \begin{minipage}{0.9\textwidth}
                 \begin{verbatim}
                         def f(x) := 
@@ -102,6 +103,43 @@
     Also we would like to refactor our code to annotate the nodes in the $AST$ with types, it is more intuitive to understand
     the process of type annotation by bottom-up traversal of the $AST$. This blog post also talks a bit about inferring polymorphic types,
     which is one of the goals of this type inference library.
+
+
+\subsection{The syntax of the language}
+    The syntax of Pirouette is divided into three parts: the local language, the choreographic language, and the network language.
+    Here we just pick the binary operation expression from the local language as an example to show how to represent the language in syntax tree.
+
+    Suppose we have a string \texttt{5 + 2} in the source code.
+    The lexer will tokenize the string into a list of tokens, and the parser will parse the list of tokens into a syntax tree.
+    Lexer and parser are implemented in the \texttt{lib/parsing/lexer.mll} and \texttt{lib/parsing/parser.mly} respectively.
+    The definition of the syntax tree is in the \texttt{lib/ast\_core/local.ml \& choreo.ml}. In \texttt{local.ml},
+    we can find the definition of the binary operation expression:
+
+    \begin{center}
+        \setlength{\fboxsep}{5pt}
+        \adjustbox{valign=t,margin=1em,center}{
+            \begin{minipage}{1.2\textwidth}
+                \begin{verbatim}
+                    type 'a expr =
+                        | ...
+                        | BinOp of 'a expr * 'a bin_op * 'a expr * 'a
+                        | ...
+                    \end{verbatim}
+            \end{minipage}
+        }
+    \end{center}
+
+    The \texttt{BinOp} constructor takes three arguments, the left-hand side expression, the binary operator, and the right-hand side expression.
+    the syntax tree of the expression \texttt{5 + 2} will be represented as:
+
+    \begin{center}
+        \begin{tikzpicture}
+            \node {+}
+            child {node {5}}
+            child {node {2}};
+        \end{tikzpicture}
+    \end{center}
+
 
 \subsection{Understanding the Type System}
     The type system is a set of rules that define the types of expressions in the program.
@@ -143,24 +181,28 @@
 \section{Details}
 \subsection{Type Definition}
     \begin{itemize}
-        \item \textbf{Typvar} \\
+        \item \textbf{typvar} \\
               A type variable is a placeholder for a type that we don't know yet. We use type variables to represent unknown types in our type inference process.
-        \item \textbf{Local\_subst \& Choreo\_subst} \\
+        \item \textbf{local\_subst \& choreo\_subst} \\
               A substitution is a mapping from type variables to types. We use substitutions to represent the constraints on the types of expressions. The example of a local substitution is \texttt{[(T1, int), (T2, int -> int)]}.
-        \item \textbf{Local\_ctx \& Choreo\_ctx \& Global\_ctx} \\
-              A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program. The example of a local context is \texttt{[(foo, int), (bar, bool)]}. The global context is the context that stores the type bindings of all the variables including different locations in the program. The example of a global context is \texttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
+        \item \textbf{local\_ctx \& choreo\_ctx \& global\_ctx} \\
+              A context is a mapping from variable names to types. We use contexts to store the type bindings of variables in the program. The example of a local context is \texttt{[(foo, int), (bar, bool)]}.
+              The global context is the context that stores the type bindings of all the variables including different locations in the program.
+              The example of a global context is \texttt{[(Alice, foo, int), (Bob, foo, bool), (Alice, bar, string)]}.
+              The choreographic context is the context that stores the choreographic type bindings in the choreographic language.
     \end{itemize}
 
 \subsection{Auxiliary Functions}
     \fxnote{Add the explaination of the auxiliary functions}
     \begin{itemize}
-        \item \textbf{add\_binding} \texttt{: (`a * `b) list $\to$ `a $\to$ `b $\to$ (`a * `b) list} \\
-              Generates a fresh type variable.
-        \item \textbf{ctx\_lookup} \texttt{: (`a * `b) list $\to$ `a $\to$ (`b * typvar) result} \\
-              Looks up a variable in the context and returns the type binding of the variable.
         \item \textbf{extract\_local\_ctx}
+        \item \textbf{get\_choreo\_ctx}
         \item \textbf{gen\_ftv}
-        \item \textbf{etc.}
+        \item \textbf{occurs\_in}
+        \item \textbf{get\_choreo\_subst}
+        \item \textbf{unify\_local \& unify\_choreo}
+        \item \textbf{apply\_subst\_typ\_local \& apply\_subst\_typ\_choreo}
+        \item \textbf{apply\_subst\_ctx\_local \& apply\_subst\_ctx\_choreo}
     \end{itemize}
 
 \subsection{Type Inference for Local Language}
