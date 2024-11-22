@@ -1,9 +1,12 @@
 module Local = Local.M
 
 module M = struct
+  type 'a typ_id = TypId of string * 'a
+
   type 'a typ =
     | TUnit of 'a
     | TLoc of 'a Local.loc_id * 'a Local.typ * 'a
+    | TVar of 'a typ_id * 'a
     | TMap of 'a typ * 'a typ * 'a
     | TProd of 'a typ * 'a typ * 'a
     | TSum of 'a typ * 'a typ * 'a
@@ -45,15 +48,21 @@ module With (Info : sig
     type t
   end) =
 struct
+  type nonrec typ_id = Info.t M.typ_id
   type nonrec typ = Info.t M.typ
   type nonrec pattern = Info.t M.pattern
   type nonrec expr = Info.t M.expr
   type nonrec stmt = Info.t M.stmt
   type nonrec stmt_block = stmt list
 
+  let get_info_typid : typ_id -> Info.t = function
+    | TypId (_, i) -> i
+  ;;
+
   let get_info_typ : typ -> Info.t = function
     | TUnit i -> i
     | TLoc (_, _, i) -> i
+    | TVar (_, i) -> i
     | TMap (_, _, i) -> i
     | TProd (_, _, i) -> i
     | TSum (_, _, i) -> i
@@ -92,10 +101,16 @@ struct
     | TypeDecl (_, _, i) -> i
   ;;
 
+  let set_info_typid : Info.t -> typ_id -> typ_id =
+    fun i -> function
+    | TypId (s, _) -> TypId (s, i)
+  ;;
+
   let set_info_typ : Info.t -> typ -> typ =
     fun i -> function
     | TUnit _ -> TUnit i
     | TLoc (loc, typ, _) -> TLoc (loc, typ, i)
+    | TVar (t, _) -> TVar (t, i)
     | TMap (t1, t2, _) -> TMap (t1, t2, i)
     | TProd (t1, t2, _) -> TProd (t1, t2, i)
     | TSum (t1, t2, _) -> TSum (t1, t2, i)

@@ -1,7 +1,10 @@
 module M : sig
+  type 'a typ_id = TypId of string * 'a
+
   type 'a typ =
     | TUnit of 'a
     | TLoc of 'a Local.M.loc_id * 'a Local.M.typ * 'a
+    | TVar of 'a typ_id * 'a
     | TMap of 'a typ * 'a typ * 'a
     | TProd of 'a typ * 'a typ * 'a
     | TSum of 'a typ * 'a typ * 'a
@@ -44,16 +47,19 @@ module With : functor
        type t
      end)
     -> sig
+  type nonrec typ_id = Info.t M.typ_id
   type nonrec typ = Info.t M.typ
   type nonrec pattern = Info.t M.pattern
   type nonrec expr = Info.t M.expr
   type nonrec stmt = Info.t M.stmt
   type nonrec stmt_block = stmt list
 
+  val get_info_typid : typ_id -> Info.t
   val get_info_typ : typ -> Info.t
   val get_info_pattern : pattern -> Info.t
   val get_info_expr : expr -> Info.t
   val get_info_stmt : stmt -> Info.t
+  val set_info_typid : Info.t -> typ_id -> typ_id
   val set_info_typ : Info.t -> typ -> typ
   val set_info_pattern : Info.t -> pattern -> pattern
   val set_info_expr : Info.t -> expr -> expr

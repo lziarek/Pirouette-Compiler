@@ -37,8 +37,21 @@ let rec unify_local t1 t2 : local_subst =
     s1 @ s2
   | _ -> failwith "Unification failed"
 
-and unify_choreo t1 t2 =
+and unify_choreo t1 t2 : choreo_subst =
   match t1, t2 with
+  | Choreo.TUnit _, Choreo.TUnit _ -> []
+  | Choreo.TLoc (loc1, t1, _), Choreo.TLoc (loc2, t2, _) ->
+    if loc1 = loc2
+    then get_choreo_subst (unify_local t1 t2) loc1
+    else failwith "Location mismatch"
+  | Choreo.TVar (Choreo.TypId (var_name, _), _), t
+  | t, Choreo.TVar (Choreo.TypId (var_name, _), _) ->
+    if t = Choreo.TVar (Choreo.TypId (var_name, m), m)
+    then []
+    else if occurs_in_choreo var_name t
+    then failwith "Occurs check failed"
+    else [ var_name, t ]
+  | Choreo.TMap (t1a, t1b, _), Choreo.TMap (t2a, t2b, _)
   | Choreo.TProd (t1a, t1b, _), Choreo.TProd (t2a, t2b, _)
   | Choreo.TSum (t1a, t1b, _), Choreo.TSum (t2a, t2b, _) ->
     let s1 = unify_choreo t1a t2a in
@@ -48,15 +61,6 @@ and unify_choreo t1 t2 =
     s1 @ s2
   | _ -> failwith "Unification failed"
 
-(* Apply substitution to a Choreo.typ *)
-and apply_subst_typ_choreo s t =
-  match t with
-  | Choreo.TProd (t1, t2, _) ->
-    Choreo.TProd (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
-  | Choreo.TSum (t1, t2, _) ->
-    Choreo.TSum (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
-  | _ -> failwith "Type not found when applying substitution"
-
 (*occurs check: ensure t1 does not occur in t2*)
 and occurs_in var_name t2 =
   match t2 with
@@ -64,6 +68,15 @@ and occurs_in var_name t2 =
   | Local.TVar (Local.TypId (var_name', _), _) -> var_name = var_name'
   | Local.TProd (t2a, t2b, _) | Local.TSum (t2a, t2b, _) ->
     occurs_in var_name t2a || occurs_in var_name t2b
+
+(*occurs check for choreo*)
+and occurs_in_choreo var_name t2 =
+  match t2 with
+  | Choreo.TUnit _ -> false
+  | Choreo.TLoc (_, t, _) -> occurs_in var_name t
+  | Choreo.TVar (Choreo.TypId (var_name', _), _) -> var_name = var_name'
+  | Choreo.TMap (t1, t2, _) | Choreo.TProd (t1, t2, _) | Choreo.TSum (t1, t2, _) ->
+    occurs_in_choreo var_name t1 || occurs_in_choreo var_name t2
 
 (*traverse the substitution list `s`, apply all occurences of subst to `t`*)
 and apply_subst_typ_local s t =
@@ -77,6 +90,23 @@ and apply_subst_typ_local s t =
     Local.TProd (apply_subst_typ_local s t1, apply_subst_typ_local s t2, m)
   | Local.TSum (t1, t2, _) ->
     Local.TSum (apply_subst_typ_local s t1, apply_subst_typ_local s t2, m)
+
+(*apply substitution to a Choreo.typ*)
+and apply_subst_typ_choreo s t =
+  match t with
+  | Choreo.TUnit _ -> t
+  | Choreo.TLoc (loc, t, _) ->
+    Choreo.TLoc (loc, apply_subst_typ_local (get_local_subst s loc) t, m)
+  | Choreo.TVar (Choreo.TypId (var_name, _), _) ->
+    (match List.assoc_opt var_name s with
+     | Some t' -> t'
+     | None -> t)
+  | Choreo.TMap (t1, t2, _) ->
+    Choreo.TMap (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
+  | Choreo.TProd (t1, t2, _) ->
+    Choreo.TProd (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
+  | Choreo.TSum (t1, t2, _) ->
+    Choreo.TSum (apply_subst_typ_choreo s t1, apply_subst_typ_choreo s t2, m)
 
 (*apply substitution to context*)
 and apply_subst_ctx_local subst ctx =
@@ -97,10 +127,9 @@ and gen_ftv =
     let v = !counter in
     counter := !counter + 1;
     "T" ^ string_of_int v
-;;
 
 (*extract loc_id's local context from glocal context*)
-let extract_local_ctx (global_ctx : global_ctx) loc_id =
+and extract_local_ctx (global_ctx : global_ctx) loc_id =
   List.fold_right
     (fun (loc, var_name, typ) acc -> if loc = loc_id then (var_name, typ) :: acc else acc)
     global_ctx
@@ -111,6 +140,16 @@ and get_choreo_subst local_subst loc_id =
   List.fold_right
     (fun (var_name, typ) acc -> (var_name, Choreo.TLoc (loc_id, typ, m)) :: acc)
     local_subst
+    []
+
+and get_local_subst (choreo_subst : choreo_subst) (loc_id : ftv Local.loc_id) =
+  List.fold_right
+    (fun (var_name, t) acc ->
+      match t with
+      | Choreo.TLoc (loc_id', typ, _) ->
+        if loc_id = loc_id' then (var_name, typ) :: acc else acc
+      | _ -> acc)
+    choreo_subst
     []
 
 (*return a choreo context given local context and loc_id*)
@@ -477,7 +516,7 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
 and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.Default _ -> [], Choreo.TUnit m, []
   | Choreo.Var (Local.VarId (var_name, _), _) ->
-    let typ_v = Local.TVar (Local.TypId (gen_ftv (), m), m) in
+    let typ_v = Choreo.TVar (Choreo.TypId (gen_ftv (), m), m) in
     [], typ_v, [ var_name, typ_v ]
   | Choreo.Pair (p1, p2, _) ->
     let s1, t1, ctx1 = infer_choreo_pattern choreo_ctx global_ctx p1 in
