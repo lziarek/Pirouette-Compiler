@@ -1,7 +1,7 @@
 module Local = Local.M
 
 module M = struct
-  type 'a typ_id = TypId of string * 'a
+  type 'a typ_id = Typ_Id of string * 'a
 
   type 'a typ =
     | TUnit of 'a
@@ -56,7 +56,7 @@ struct
   type nonrec stmt_block = stmt list
 
   let get_info_typid : typ_id -> Info.t = function
-    | TypId (_, i) -> i
+    | Typ_Id (_, i) -> i
   ;;
 
   let get_info_typ : typ -> Info.t = function
@@ -103,7 +103,7 @@ struct
 
   let set_info_typid : Info.t -> typ_id -> typ_id =
     fun i -> function
-    | TypId (s, _) -> TypId (s, i)
+    | Typ_Id (s, _) -> Typ_Id (s, i)
   ;;
 
   let set_info_typ : Info.t -> typ -> typ =

@@ -26,18 +26,20 @@ val infer_choreo_expr
   -> ftv Ast_core.Choreo.M.expr
   -> choreo_subst * ftv Ast_core.Choreo.M.typ
 
-(* val infer_choreo_pattern
-   :  choreo_ctx
-   -> global_ctx
-   -> ftv Ast_core.Choreo.M.pattern
-   -> choreo_subst * ftv Ast_core.Choreo.M.typ * choreo_ctx *)
+val infer_choreo_pattern
+  :  choreo_ctx
+  -> global_ctx
+  -> ftv Ast_core.Choreo.M.pattern
+  -> choreo_subst * ftv Ast_core.Choreo.M.typ * choreo_ctx
 
 val infer_choreo_stmt
   :  choreo_ctx
   -> global_ctx
   -> ftv Ast_core.Choreo.M.stmt
-  -> choreo_subst * ftv Ast_core.Choreo.M.typ
+  -> choreo_subst * ftv Ast_core.Choreo.M.typ * choreo_ctx
 
 val infer_choreo_stmt_block
-  :  ftv Ast_core.Choreo.M.stmt_block
-  -> ftv Ast_core.Choreo.M.typ
+  :  choreo_ctx
+  -> global_ctx
+  -> ftv Ast_core.Choreo.M.stmt_block
+  -> choreo_subst * ftv Ast_core.Choreo.M.typ * choreo_ctx

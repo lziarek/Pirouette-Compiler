@@ -1,5 +1,5 @@
 module M : sig
-  type 'a typ_id = TypId of string * 'a
+  type 'a typ_id = Typ_Id of string * 'a
 
   type 'a typ =
     | TUnit of 'a
