@@ -104,15 +104,17 @@ let mismatched_pattn_match =
     , m )
 ;;
 
-let expr_typ_eq e expected_t =
+let local_expr_typ_eq e expected_t =
   let subst, t = infer_local_expr [] e in
   assert_equal t expected_t;
   assert_equal subst []
 ;;
 
-let expr_typ_failures e failure = assert_raises failure (fun _ -> expr_typ_eq e (TUnit m))
+let local_expr_typ_failures e failure =
+  assert_raises failure (fun _ -> local_expr_typ_eq e (TUnit m))
+;;
 
-let pattn_typ_eq p expected_ctx expected_t =
+let local_pattn_typ_eq p expected_ctx expected_t =
   let subst, t, ctx = infer_local_pattern [] p in
   assert_equal t expected_t;
   assert_equal subst [];
@@ -121,61 +123,69 @@ let pattn_typ_eq p expected_ctx expected_t =
 
 let const_suite =
   "Const type inference tests"
-  >::: [ ("Correct infer local unit" >:: fun _ -> TUnit m |> expr_typ_eq correct_unit_e)
+  >::: [ ("Correct infer local unit"
+          >:: fun _ -> TUnit m |> local_expr_typ_eq correct_unit_e)
        ; ("Correct infer local bool"
-          >:: fun _ -> TBool m |> expr_typ_eq correct_binop_bool_e)
-       ; ("Correct infer local int" >:: fun _ -> TInt m |> expr_typ_eq correct_binop_int_e)
+          >:: fun _ -> TBool m |> local_expr_typ_eq correct_binop_bool_e)
+       ; ("Correct infer local int"
+          >:: fun _ -> TInt m |> local_expr_typ_eq correct_binop_int_e)
        ; ("Correct infer local not bool"
-          >:: fun _ -> TBool m |> expr_typ_eq correct_unop_bool_e)
+          >:: fun _ -> TBool m |> local_expr_typ_eq correct_unop_bool_e)
        ; ("Correct infer local and bool"
-          >:: fun _ -> TBool m |> expr_typ_eq correct_and_bool_e)
+          >:: fun _ -> TBool m |> local_expr_typ_eq correct_and_bool_e)
        ; ("Correct infer local neg int"
-          >:: fun _ -> TInt m |> expr_typ_eq correct_unop_int_e)
+          >:: fun _ -> TInt m |> local_expr_typ_eq correct_unop_int_e)
        ; ("Correct infer local pair"
-          >:: fun _ -> TProd (TInt m, TString m, m) |> expr_typ_eq correct_pair_e)
-       ; ("Correct infer local fst pair" >:: fun _ -> TInt m |> expr_typ_eq correct_fst)
-       ; ("Correct infer local snd pair" >:: fun _ -> TString m |> expr_typ_eq correct_snd)
+          >:: fun _ -> TProd (TInt m, TString m, m) |> local_expr_typ_eq correct_pair_e)
+       ; ("Correct infer local fst pair"
+          >:: fun _ -> TInt m |> local_expr_typ_eq correct_fst)
+       ; ("Correct infer local snd pair"
+          >:: fun _ -> TString m |> local_expr_typ_eq correct_snd)
        ; ("Correct infer local left sum"
           >:: fun _ ->
-          TSum (TInt m, TVar (TypId ("T0", m), m), m) |> expr_typ_eq correct_left)
+          TSum (TInt m, TVar (TypId ("T0", m), m), m) |> local_expr_typ_eq correct_left)
        ; ("Correct infer local right sum"
           >:: fun _ ->
-          TSum (TVar (TypId ("T0", m), m), TInt m, m) |> expr_typ_eq correct_right)
+          TSum (TVar (TypId ("T0", m), m), TInt m, m) |> local_expr_typ_eq correct_right)
        ]
 ;;
 
 let local_binding_suite =
   "Local binding type inference tests"
   >::: [ ("Correct infer local int binding"
-          >:: fun _ -> TInt m |> expr_typ_eq correct_let_int_e)
+          >:: fun _ -> TInt m |> local_expr_typ_eq correct_let_int_e)
        ; ("Correct infer local bool binding"
-          >:: fun _ -> TBool m |> expr_typ_eq correct_let_bool_e)
+          >:: fun _ -> TBool m |> local_expr_typ_eq correct_let_bool_e)
        ; ("Correct infer local string binding"
-          >:: fun _ -> TProd (TInt m, TString m, m) |> expr_typ_eq correct_let_str_e)
-       ; ("Correct nested binding"
-          >:: fun _ -> TProd (TInt m, TString m, m) |> expr_typ_eq correct_nested_binding
+          >:: fun _ -> TProd (TInt m, TString m, m) |> local_expr_typ_eq correct_let_str_e
          )
+       ; ("Correct nested binding"
+          >:: fun _ ->
+          TProd (TInt m, TString m, m) |> local_expr_typ_eq correct_nested_binding)
        ]
 ;;
 
 let correct_pattn_suite =
   "Local pattern type inference tests"
-  >::: [ ("Correct infer local int pattern" >:: fun _ -> TInt m |> pattn_typ_eq int_p [])
+  >::: [ ("Correct infer local int pattern"
+          >:: fun _ -> TInt m |> local_pattn_typ_eq int_p [])
        ; ("Correct infer local default pattern"
-          >:: fun _ -> TUnit m |> pattn_typ_eq def_p [])
+          >:: fun _ -> TUnit m |> local_pattn_typ_eq def_p [])
        ; ("Correct infer local string pattern"
-          >:: fun _ -> TString m |> pattn_typ_eq string_p [])
+          >:: fun _ -> TString m |> local_pattn_typ_eq string_p [])
        ; ("Correct infer local pair pattern"
           >:: fun _ ->
           TProd (TVar (TypId ("T0", m), m), TString m, m)
-          |> pattn_typ_eq pair_p [ "foo", TVar (TypId ("T0", m), m) ])
+          |> local_pattn_typ_eq pair_p [ "foo", TVar (TypId ("T0", m), m) ])
        ; ("Correct infer local left pattern"
           >:: fun _ ->
-          TSum (TInt m, TVar (TypId ("T0", m), m), m) |> pattn_typ_eq left_int_p [])
+          TSum (TInt m, TVar (TypId ("T0", m), m), m) |> local_pattn_typ_eq left_int_p []
+         )
        ; ("Correct infer local right pattern"
           >:: fun _ ->
-          TSum (TVar (TypId ("T0", m), m), TUnit m, m) |> pattn_typ_eq right_def_p [])
-       ; ("Correct pattern match" >:: fun _ -> TInt m |> expr_typ_eq int_pattn_match)
+          TSum (TVar (TypId ("T0", m), m), TUnit m, m)
+          |> local_pattn_typ_eq right_def_p [])
+       ; ("Correct pattern match" >:: fun _ -> TInt m |> local_expr_typ_eq int_pattn_match)
        ]
 ;;
 
@@ -183,38 +193,38 @@ let incorrect_local_type_suite =
   "Detect local type errors"
   >::: [ ("type error in local binop bool"
           >:: fun _ ->
-          Failure "Unification failed" |> expr_typ_failures incorrect_binop_bool_e)
+          Failure "Unification failed" |> local_expr_typ_failures incorrect_binop_bool_e)
        ; ("type error in local binop int"
           >:: fun _ ->
-          Failure "Unification failed" |> expr_typ_failures incorrect_binop_int_e)
+          Failure "Unification failed" |> local_expr_typ_failures incorrect_binop_int_e)
        ; ("type error in local unop bool"
           >:: fun _ ->
-          Failure "Unification failed" |> expr_typ_failures incorrect_unop_bool_e)
+          Failure "Unification failed" |> local_expr_typ_failures incorrect_unop_bool_e)
        ; ("type error in local binop bool 2"
           >:: fun _ ->
-          Failure "Unification failed" |> expr_typ_failures incorrect_and_bool_e)
+          Failure "Unification failed" |> local_expr_typ_failures incorrect_and_bool_e)
        ; ("type error in local unop int"
           >:: fun _ ->
-          Failure "Unification failed" |> expr_typ_failures incorrect_unop_int_e)
+          Failure "Unification failed" |> local_expr_typ_failures incorrect_unop_int_e)
        ; ("Incorrect type binding"
           >:: fun _ ->
-          Failure "Unification failed" |> expr_typ_failures incorrect_typ_binding)
+          Failure "Unification failed" |> local_expr_typ_failures incorrect_typ_binding)
        ; ("Incorrect type annotation"
           >:: fun _ ->
           Failure "Type annotation and actual type mismatch"
-          |> expr_typ_failures incorrect_typ_anno)
+          |> local_expr_typ_failures incorrect_typ_anno)
        ; ("Unbound variable in local expression"
           >:: fun _ ->
           Failure "Variable not found when inferring expression"
-          |> expr_typ_failures int_var)
+          |> local_expr_typ_failures int_var)
        ; ("Incorrect pattern match - return type mismatch"
           >:: fun _ ->
           Failure "Type of sub exprs mismatch"
-          |> expr_typ_failures mismatched_return_match)
+          |> local_expr_typ_failures mismatched_return_match)
        ; ("Incorrect pattern match - pattern type mismatch"
           >:: fun _ ->
           Failure "Type of patterns are not sum types"
-          |> expr_typ_failures mismatched_pattn_match)
+          |> local_expr_typ_failures mismatched_pattn_match)
        ]
 ;;
 

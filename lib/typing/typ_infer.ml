@@ -535,7 +535,7 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
 and infer_choreo_pattern choreo_ctx global_ctx = function
   | Choreo.Default _ -> [], Choreo.TUnit m, []
   | Choreo.Var (Local.VarId (var_name, _), _) ->
-    let typ_v = Choreo.TVar (Choreo.Typ_Id (gen_ftv (), m), m) in
+    let typ_v = Choreo.TVar (Choreo.TypId (gen_ftv (), m), m) in
     [], typ_v, [ var_name, typ_v ]
   | Choreo.Pair (p1, p2, _) ->
     let s1, t1, ctx1 = infer_choreo_pattern choreo_ctx global_ctx p1 in
