@@ -27,7 +27,7 @@ let rec unify_local t1 t2 : local_subst =
   | t, Local.TVar (Local.TypId (var_name, _), _) ->
     if t = Local.TVar (Local.TypId (var_name, m), m)
     then []
-    else if occurs_in var_name t
+    else if occurs_in_local var_name t
     then failwith "Occurs check failed"
     else [ var_name, t ]
   | Local.TProd (t1a, t1b, _), Local.TProd (t2a, t2b, _)
@@ -62,18 +62,18 @@ and unify_choreo t1 t2 : choreo_subst =
   | _ -> failwith "Unification failed"
 
 (*occurs check: ensure t1 does not occur in t2*)
-and occurs_in var_name t2 =
+and occurs_in_local var_name t2 =
   match t2 with
   | Local.TInt _ | Local.TBool _ | Local.TString _ | Local.TUnit _ -> false
   | Local.TVar (Local.TypId (var_name', _), _) -> var_name = var_name'
   | Local.TProd (t2a, t2b, _) | Local.TSum (t2a, t2b, _) ->
-    occurs_in var_name t2a || occurs_in var_name t2b
+    occurs_in_local var_name t2a || occurs_in_local var_name t2b
 
 (*occurs check for choreo*)
 and occurs_in_choreo var_name t2 =
   match t2 with
   | Choreo.TUnit _ -> false
-  | Choreo.TLoc (_, t, _) -> occurs_in var_name t
+  | Choreo.TLoc (_, t, _) -> occurs_in_local var_name t
   | Choreo.TVar (Choreo.TypId (var_name', _), _) -> var_name = var_name'
   | Choreo.TMap (t1, t2, _) | Choreo.TProd (t1, t2, _) | Choreo.TSum (t1, t2, _) ->
     occurs_in_choreo var_name t1 || occurs_in_choreo var_name t2
@@ -344,7 +344,7 @@ let rec infer_choreo_stmt choreo_ctx global_ctx stmt
         (List.map (apply_subst_typ_choreo s2) t_list')
     in
     s1 @ s2 @ s3, t1, ctx_list @ choreo_ctx
-  | Choreo.TypeDecl (typ_id, choreo_typ, _) -> failwith "Not implemented"
+  | Choreo.TypeDecl (_typ_id, _choreo_typ, _) -> failwith "Not implemented"
 
 and infer_choreo_stmt_block choreo_ctx global_ctx stmts
   : choreo_subst * ftv Choreo.typ * choreo_ctx

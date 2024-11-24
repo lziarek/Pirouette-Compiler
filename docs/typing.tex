@@ -14,7 +14,7 @@
 \usepackage{xcolor} % Required for the color
 \usepackage{soul} % Required for the highlight
 \usepackage[backend=biber,style=numeric,sorting=none]{biblatex} % bibliography, install biber otherwise it will not work
-\addbibresource{typing.bib} 
+\addbibresource{typing.bib}
 \usepackage[colorlinks=true, linkcolor=cyan, citecolor=cyan, urlcolor=blue]{hyperref} % hyperlink
 
 
@@ -203,7 +203,6 @@
     \end{itemize}
 
 \subsection{Auxiliary Functions}
-    \fxnote{Add the explaination of the auxiliary functions}
     \begin{itemize}
         \item \textbf{extract\_local\_ctx} \texttt{: global\_ctx -> string -> local\_ctx}\\
               \highlighttexttt{extract\_local\_ctx global\_ctx loc} return the local context of location \highlighttexttt{loc} in the global context \highlighttexttt{global\_ctx}.
@@ -226,17 +225,19 @@
               Return a fresh type variables of a type. The fresh type variables of a type are
               the type variables that appear in the type but are not bound by the type.
               This function is stateful because it increments the global reference counter each time it is called.
-        \item \textbf{occurs\_in} \texttt{: typvar -> Local.typ -> bool}\\
-              \highlighttexttt{occurs\_in t typ} return true if the type variable \highlighttexttt{t} occurs in the type \highlighttexttt{typ}.
-              That is, \highlighttexttt{occurs\_in T1 (int -> T1)} return \highlighttexttt[orange]{true}.
+        \item \textbf{occurs\_in\_local \& occurs\_in\_choreo}\\
+              \texttt{: typvar -> Local.typ -> bool \& typvar -> Choreo.typ -> bool}\\
+              \highlighttexttt{occurs\_in\_local t typ} return true if the type variable \highlighttexttt{t} occurs in the type \highlighttexttt{typ}.
+              That is, \highlighttexttt{occurs\_in\_local T1 (int -> T1)} return \highlighttexttt[orange]{true}.
               This function is used to check if the type variable occurs in the type, which is a necessary condition for the unification algorithm.
               Consider unifying \highlighttexttt{T1} with \highlighttexttt{T1 -> T2}, since \highlighttexttt{T1} occurs in the type \highlighttexttt{T1 -> T2},
               this is a self-referential type, it will be \highlighttexttt{T1 -> (T1 -> (T1 -> \ldots))}, which cause an infinite loop.
               Therefore, unification will fail if the type variable occurs in the type.
-        \item \textbf{unify\_local \& unify\_choreo} \\
-              \texttt{: Local.typ -> Local.typ -> local\_subst \&\\
-                  Choreo.typ -> Choreo.typ -> choreo\_subst}\\
-              \highlighttexttt{unify\_local typ1 typ2 subst} return the substitution that unifies the type \highlighttexttt{typ1} with the type \highlighttexttt{typ2}
+
+              The functionality of \highlighttexttt{occurs\_in\_choreo} is the same as the local version.
+        \item \textbf{unify\_local \& unify\_choreo}\\
+              \texttt{: Local.typ -> Local.typ -> local\_subst \&\\Choreo.typ -> Choreo.typ -> choreo\_subst}\\
+              \highlighttexttt{unify\_local typ1 typ2} return the substitution that unifies the type \highlighttexttt{typ1} with the type \highlighttexttt{typ2}
               and return the result substitution \highlighttexttt{subst}.
 
               The logic of the local unification algorithm is as follows:
@@ -250,11 +251,27 @@
                   \item If the above conditions are not met, the unification fails.
               \end{itemize}
 
-              The functionality of \highlighttexttt{unify\_choreo} is the same as \highlighttexttt{unify\_local}, 
-              the only difference is that the \highlighttexttt{unify\_choreo} can handle the choreographic 
+              These can also be found in the NEU note\cite{NEU2}.
+
+              The functionality of \highlighttexttt{unify\_choreo} is the same as the local version,
+              the only difference is that the \highlighttexttt{unify\_choreo} can handle the choreographic
               \highlighttexttt{TMaps} type which is used to represent the type of the function.
-        \item \textbf{apply\_subst\_typ\_local \& apply\_subst\_typ\_choreo}
-        \item \textbf{apply\_subst\_ctx\_local \& apply\_subst\_ctx\_choreo}
+        \item \textbf{apply\_subst\_typ\_local \& apply\_subst\_typ\_choreo}\\
+              \texttt{: local\_subst -> Local.typ -> Local.typ \&\\ choreo\_subst -> Choreo.typ -> Choreo.typ}\\
+              \highlighttexttt{apply\_subst\_typ\_local subst typ} apply the substitution \highlighttexttt{subst} to the type \highlighttexttt{typ},
+              and return the type after applying the substitution.
+              That is, \highlighttexttt{apply\_subst\_typ\_local [(T1, int)] (int -> T1)} return \highlighttexttt{int -> int}.
+              This function is used to apply the substitution to the type after the unification algorithm,
+              it solve the constraints on the types of expressions by traversing the substitution and apply all occurence of the type variable to the type.
+
+              The functionality of \highlighttexttt{apply\_subst\_typ\_choreo} is the same as the local version,
+              the only difference is that the \highlighttexttt{apply\_subst\_typ\_choreo} can handle the choreographic \highlighttexttt{TMaps} type.
+
+        \item \textbf{apply\_subst\_ctx\_local \& apply\_subst\_ctx\_choreo}\\
+              \texttt{: local\_subst -> local\_ctx -> local\_ctx \&\\ choreo\_subst -> choreo\_ctx -> choreo\_ctx}\\
+              Both functions use \href{https://ocaml.org/manual/5.2/api/List.html#VALmap}{\highlighttexttt[orange]{List.map}}
+              with the \highlighttexttt{apply\_subst\_typ\_local} and \highlighttexttt{apply\_subst\_typ\_choreo} functions
+              to apply the substitution to the types in the context.
     \end{itemize}
 
 \subsection{Type Inference for Local Language}
