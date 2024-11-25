@@ -228,26 +228,6 @@ let incorrect_local_type_suite =
        ]
 ;;
 
-let () =
-  print_endline "\nConst type inference tests";
-  run_test_tt_main const_suite
-;;
-
-let () =
-  print_endline "\nlocal binding tests";
-  run_test_tt_main local_binding_suite
-;;
-
-let () =
-  print_endline "\nCorrect local pattern type inference tests";
-  run_test_tt_main correct_pattn_suite
-;;
-
-let () =
-  print_endline "\nIncorrect local type inference tests";
-  run_test_tt_main incorrect_local_type_suite
-;;
-
 let choreo_expr_typ_eq e expected_t =
   let subst, t = infer_choreo_expr [] [] e in
   assert_equal t expected_t;
@@ -265,6 +245,7 @@ let choreo_pattern_typ_eq p expected_ctx expected_t =
   assert_equal ctx expected_ctx
 ;;
 
+(*--------------------Choreo const type inference testcases--------------------*)
 let correct_choreo_unit_e = Choreo.Unit m
 
 let correct_choreo_loc_expr =
@@ -298,7 +279,69 @@ let correct_snd = Choreo.Snd (correct_choreo_pair, m)
 let correct_left = Choreo.Left (correct_choreo_loc_expr, m)
 let correct_right = Choreo.Right (correct_choreo_loc_expr, m)
 
-(*Detect choreo type errors*)
+(*--------------------Binding choreo type variables--------------------*)
+let choreo_int_var =
+  Choreo.Send
+    ( Local.LocId ("Alice", m)
+    , Choreo.Var (Local.VarId ("x", m), m)
+    , Local.LocId ("Bob", m)
+    , m )
+;;
+
+let choreo_bool_var =
+  Choreo.If
+    (Choreo.Var (Local.VarId ("y", m), m), correct_choreo_loc_expr, correct_choreo_send, m)
+;;
+
+let choreo_string_var =
+  Choreo.Pair (correct_choreo_loc_expr, Choreo.Var (Local.VarId ("z", m), m), m)
+;;
+
+let correct_choreo_let_int_e =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("x", m), m)
+          , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          , m )
+      ]
+    , choreo_int_var
+    , m )
+;;
+
+let correct_choreo_let_bool_e =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("y", m), m)
+          , Choreo.TLoc (Local.LocId ("Bob", m), Local.TBool m, m)
+          , m )
+      ]
+    , choreo_bool_var
+    , m )
+;;
+
+let correct_choreo_let_str_e =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("z", m), m)
+          , Choreo.TLoc (Local.LocId ("Charlie", m), Local.TString m, m)
+          , m )
+      ]
+    , choreo_string_var
+    , m )
+;;
+
+let correct_choreo_nested_binding =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("x", m), m)
+          , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          , m )
+      ]
+    , correct_choreo_let_bool_e
+    , m )
+;;
+
+(*--------------------Detect choreo type errors--------------------*)
 let incorrect_choreo_if_condition =
   Choreo.If
     ( Choreo.LocExpr (Local.LocId ("Alice", m), Local.Val (Local.Int (1, m), m), m)
@@ -320,6 +363,88 @@ let incorrect_choreo_send =
 (*the first expr should be a function*)
 let incorrect_choreo_funapp =
   Choreo.FunApp (correct_choreo_loc_expr, correct_choreo_loc_expr, m)
+;;
+
+let incorrect_choreo_let_type =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("x", m), m)
+          , Choreo.TLoc (Local.LocId ("Alice", m), Local.TBool m, m)
+          , m )
+      ]
+    , choreo_int_var
+    , (*trying to use int var with bool declaration*)
+      m )
+;;
+
+let incorrect_choreo_let_binding =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("x", m), m)
+          , Choreo.TLoc (Local.LocId ("Alice", m), Local.TBool m, m)
+          , m )
+      ]
+    , Choreo.Var (Local.VarId ("y", m), m)
+    , (*unbound variable*)
+      m )
+;;
+
+let incorrect_choreo_location =
+  Choreo.Let
+    ( [ Choreo.Decl
+          ( Choreo.Var (Local.VarId ("x", m), m)
+          , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          , m )
+      ]
+    , Choreo.Send
+        ( Local.LocId ("Bob", m)
+        , Choreo.Var (Local.VarId ("x", m), m)
+        , (*using Alice's var at Bob*)
+          Local.LocId ("Charlie", m)
+        , m )
+    , m )
+;;
+
+(*--------------------Choreo patterns--------------------*)
+let choreo_def_p : ftv Choreo.pattern = Choreo.Default m
+let choreo_var_p : ftv Choreo.pattern = Choreo.Var (Local.VarId ("foo", m), m)
+
+let choreo_loc_int_p : ftv Choreo.pattern =
+  Choreo.LocPat (Local.LocId ("Alice", m), Local.Val (Local.Int (1, m), m), m)
+;;
+
+(*
+   let choreo_loc_bool_p : ftv Choreo.pattern =
+   Choreo.LocPat (Local.LocId ("Bob", m), Local.Val (Local.Bool (true, m), m), m)
+   ;; *)
+
+let choreo_pair_p : ftv Choreo.pattern = Choreo.Pair (choreo_var_p, choreo_loc_int_p, m)
+let choreo_left_loc_p : ftv Choreo.pattern = Choreo.Left (choreo_loc_int_p, m)
+let choreo_right_def_p : ftv Choreo.pattern = Choreo.Right (choreo_def_p, m)
+
+let choreo_correct_pattn_match =
+  Choreo.Match
+    ( Choreo.Var (Local.VarId ("foo", m), m)
+    , [ choreo_left_loc_p, correct_choreo_loc_expr
+      ; choreo_right_def_p, correct_choreo_send
+      ]
+    , m )
+;;
+
+let choreo_mismatched_return_match =
+  Choreo.Match
+    ( Choreo.Var (Local.VarId ("foo", m), m)
+    , [ choreo_left_loc_p, correct_choreo_loc_expr; choreo_right_def_p, Choreo.Unit m ]
+    , m )
+;;
+
+let choreo_mismatched_pattn_match =
+  Choreo.Match
+    ( Choreo.Var (Local.VarId ("foo", m), m)
+    , [ choreo_left_loc_p, correct_choreo_loc_expr
+      ; choreo_loc_int_p, correct_choreo_send
+      ]
+    , m )
 ;;
 
 let choreo_const_suite =
@@ -383,6 +508,68 @@ let choreo_const_suite =
        ]
 ;;
 
+let choreo_binding_suite =
+  "Choreo binding type inference tests"
+  >::: [ ("Correct infer let with int"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_let_int_e)
+       ; ("Correct infer let with bool"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_let_bool_e)
+       ; ("Correct infer let with string"
+          >:: fun _ ->
+          Choreo.TProd
+            ( Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , Choreo.TLoc (Local.LocId ("Charlie", m), Local.TString m, m)
+            , m )
+          |> choreo_expr_typ_eq correct_choreo_let_str_e)
+       ; ("Correct infer nested let"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_nested_binding)
+       ]
+;;
+
+let correct_choreo_pattern_suite =
+  "Choreo pattern type inference tests"
+  >::: [ ("Correct infer default pattern"
+          >:: fun _ -> Choreo.TUnit m |> choreo_pattern_typ_eq choreo_def_p [])
+       ; ("Correct infer var pattern"
+          >:: fun _ ->
+          Choreo.TVar (Choreo.Typ_Id ("T0", m), m)
+          |> choreo_pattern_typ_eq
+               choreo_var_p
+               [ "foo", Choreo.TVar (Choreo.Typ_Id ("T0", m), m) ])
+       ; ("Correct infer location int pattern"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          |> choreo_pattern_typ_eq choreo_loc_int_p [])
+       ; ("Correct infer pair pattern"
+          >:: fun _ ->
+          Choreo.TProd
+            ( Choreo.TVar (Choreo.Typ_Id ("T0", m), m)
+            , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , m )
+          |> choreo_pattern_typ_eq
+               choreo_pair_p
+               [ "foo", Choreo.TVar (Choreo.Typ_Id ("T0", m), m) ])
+       ; ("Correct infer left pattern"
+          >:: fun _ ->
+          Choreo.TSum
+            ( Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , Choreo.TLoc
+                (Local.LocId ("dummy_loc", m), Local.TVar (Local.TypId ("T0", m), m), m)
+            , m )
+          |> choreo_pattern_typ_eq choreo_left_loc_p [])
+       ; ("Correct pattern match"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq choreo_correct_pattn_match)
+       ]
+;;
+
 let incorrect_choreo_type_suite =
   "Detect choreo type errors"
   >::: [ ("Type error in if condition"
@@ -397,7 +584,66 @@ let incorrect_choreo_type_suite =
           >:: fun _ ->
           Failure "Expected function type"
           |> choreo_expr_typ_failures incorrect_choreo_funapp)
+       ; ("Type error in let declaration"
+          >:: fun _ ->
+          Failure "Type mismatch" |> choreo_expr_typ_failures incorrect_choreo_let_type)
+       ; ("Unbound variable in let"
+          >:: fun _ ->
+          Failure "Variable not found when inferring expression"
+          |> choreo_expr_typ_failures incorrect_choreo_let_binding)
+       ; ("Location mismatch in variable use"
+          >:: fun _ ->
+          Failure "Location mismatch"
+          |> choreo_expr_typ_failures incorrect_choreo_location)
+       ; ("Type error in pattern match - return type mismatch"
+          >:: fun _ ->
+          Failure "Unification failed"
+          |> choreo_expr_typ_failures choreo_mismatched_return_match)
+       ; ("Type error in pattern match - pattern type mismatch"
+          >:: fun _ ->
+          Failure "Type of patterns are not sum types"
+          |> choreo_expr_typ_failures choreo_mismatched_pattn_match)
        ]
+;;
+
+let () =
+  print_endline "\nLocal const type inference tests";
+  run_test_tt_main const_suite
+;;
+
+let () =
+  print_endline "\nlocal binding tests";
+  run_test_tt_main local_binding_suite
+;;
+
+let () =
+  print_endline "\nCorrect local pattern type inference tests";
+  run_test_tt_main correct_pattn_suite
+;;
+
+let () =
+  print_endline "\nIncorrect local type inference tests";
+  run_test_tt_main incorrect_local_type_suite
+;;
+
+let () =
+  print_endline "\nChoreo const type inference tests";
+  run_test_tt_main choreo_const_suite
+;;
+
+let () =
+  print_endline "\nChoreo binding tests";
+  run_test_tt_main choreo_binding_suite
+;;
+
+let () =
+  print_endline "\nChoreo pattern type inference tests";
+  run_test_tt_main correct_choreo_pattern_suite
+;;
+
+let () =
+  print_endline "\nIncorrect choreo type inference tests";
+  run_test_tt_main incorrect_choreo_type_suite
 ;;
 
 (*Outdated test code for boolean type checker*)
