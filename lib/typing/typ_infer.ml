@@ -286,13 +286,10 @@ let rec infer_local_expr local_ctx = function
        let s_comp = compose_subst_local s1 s2 in
        let typ_ls' = List.map (fun t -> apply_subst_typ_local s_comp t) typ_ls in
        (*if all the sub expression return the same type, unify them and return*)
-       if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
-       then (
-         let s3 =
-           List.fold_left (fun acc t -> unify_local t (List.hd typ_ls') @ acc) [] typ_ls'
-         in
-         compose_subst_local s_comp s3, List.hd typ_ls')
-       else failwith "Type of sub exprs mismatch"
+       let s3 =
+         List.fold_left (fun acc t -> unify_local t (List.hd typ_ls') @ acc) [] typ_ls'
+       in
+       compose_subst_local s_comp s3, List.hd typ_ls'
      | _ -> failwith "Type of patterns are not sum types")
 
 and typeof_Val = function
@@ -522,14 +519,10 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
        in
        let s_comp = compose_subst_choreo s1 s2 in
        let typ_ls' = List.map (apply_subst_typ_choreo s_comp) typ_ls in
-       (*if all the sub expression return the same type, unify them and return*)
-       if List.for_all (fun t -> t = List.hd typ_ls') typ_ls'
-       then (
-         let s3 =
-           List.fold_left (fun acc t -> unify_choreo t (List.hd typ_ls') @ acc) [] typ_ls'
-         in
-         compose_subst_choreo s_comp s3, List.hd typ_ls')
-       else failwith "Type of sub exprs mismatch"
+       let s3 =
+         List.fold_left (fun acc t -> unify_choreo t (List.hd typ_ls') @ acc) [] typ_ls'
+       in
+       compose_subst_choreo s_comp s3, List.hd typ_ls'
      | _ -> failwith "Type of patterns are not sum types")
 
 and infer_choreo_pattern choreo_ctx global_ctx = function

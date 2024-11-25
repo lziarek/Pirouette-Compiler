@@ -44,7 +44,7 @@
 
 \section{Background}
 
-\subsection{Introduction of Type Inference}
+\subsection{Introduction of Type Inference}\label{intro_type_infer}
     Type inference is the process of automatically deducing the types of expressions in a program.
     For example, in the following code snippet, the type of the whole expression can be inferred to be \texttt{int}:
 
@@ -148,7 +148,7 @@
     \end{center}
 
 
-\subsection{Understanding the Type System}
+\subsection{Understanding the Type System}\label{understand_type_system}
     The type system is a set of rules that define the types of expressions in the program.
     The rules are written in the form of inference rules, which are a set of premises and a conclusion.
     Consider the following example:
@@ -206,19 +206,22 @@
     \begin{itemize}
         \item \textbf{extract\_local\_ctx} \texttt{: global\_ctx -> string -> local\_ctx}\\
               \highlighttexttt{extract\_local\_ctx global\_ctx loc} return the local context of location \highlighttexttt{loc} in the global context \highlighttexttt{global\_ctx}.
-              That is, \highlighttexttt{extract\_local\_ctx [\ldots; (A, foo, int); \ldots; (A, bar, string) \ldots] A = [(foo, int), (bar, string)]}.
+              That is, \highlighttexttt{extract\_local\_ctx [\ldots; (Alice, foo, int); \ldots; (Alice, bar, string) \ldots] Alice = [(foo, int), (bar, string)]}.
+
               Use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
               to preserve the order of the context since the program update the context by adding the new type binding to the front of the context.
         \item \textbf{get\_choreo\_subst} \texttt{: local\_subst -> Local.loc\_id -> choreo\_subst}\\
               \highlighttexttt{get\_choreo\_subst local\_subst loc} return the choreographic substitution of location \highlighttexttt{loc}
               by adding the location id \highlighttexttt{loc} to the type variables in the substitution \highlighttexttt{local\_subst}.
-              That is, \highlighttexttt{get\_choreo\_ctx [(T1, int -> int)] A = [(T1, (Choreo.TLoc (A), int -> int))]}.
+              That is, \highlighttexttt{get\_choreo\_ctx [(T1, int -> int)] Alice = [(T1, (Choreo.TLoc (Alice), int -> int))]}.
+
               Use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
               to preserve the order of the context since the program update the context by adding the new type binding to the front of the substitution.
         \item \textbf{get\_choreo\_ctx} \texttt{: local\_ctx -> Local.loc\_id -> choreo\_ctx}\\
               \highlighttexttt{get\_choreo\_ctx local\_ctx loc} return the choreographic context of location \highlighttexttt{loc}
               by adding the location id \highlighttexttt{loc} to the type variables in the context \highlighttexttt{local\_ctx}.
-              That is, \highlighttexttt{get\_choreo\_ctx [(foo, int)] A = [(foo, (Choreo.TLoc ((A), int)))]}.
+              That is, \highlighttexttt{get\_choreo\_ctx [(foo, int)] Alice = [(foo, (Choreo.TLoc ((Alice), int)))]}.
+
               Use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
               to preserve the order of the context since the program update the context by adding the new type binding to the front of the context.
         \item \textbf{gen\_ftv} \texttt{: unit -> typvar}\\
@@ -238,7 +241,7 @@
         \item \textbf{unify\_local \& unify\_choreo}\\
               \texttt{: Local.typ -> Local.typ -> local\_subst \&\\Choreo.typ -> Choreo.typ -> choreo\_subst}\\
               \highlighttexttt{unify\_local typ1 typ2} return the substitution that unifies the type \highlighttexttt{typ1} with the type \highlighttexttt{typ2}
-              and return the result substitution \highlighttexttt{subst}.
+              and return the result substitution.
 
               The logic of the local unification algorithm is as follows:
               \begin{itemize}
@@ -272,11 +275,78 @@
               Both functions use \href{https://ocaml.org/manual/5.2/api/List.html#VALmap}{\highlighttexttt[orange]{List.map}}
               with the \highlighttexttt{apply\_subst\_typ\_local} and \highlighttexttt{apply\_subst\_typ\_choreo} functions
               to apply the substitution to the types in the context.
+        \item \textbf{apply\_subst\_substs\_local \& apply\_subst\_subst\_choreo}\\
+              \texttt{: local\_subst -> local\_subst -> local\_subst \&\\ choreo\_subst -> choreo\_subst -> choreo\_subst}\\
+              Similar to the \highlighttexttt{apply\_subst\_ctx\_local} and \highlighttexttt{apply\_subst\_ctx\_choreo} functions,
+              but these functions apply the substitution to the substitution.
+        \item \textbf{compose\_subst\_local \& compose\_subst\_choreo}\\
+              \texttt{: local\_subst -> local\_subst -> local\_subst \&\\ choreo\_subst -> choreo\_subst -> choreo\_subst}\\
+              \highlighttexttt{compose\_substs\_local s1 s2} use \highlighttexttt{apply\_subst\_substs\_local s1 s2}
+              to apply the substitution \highlighttexttt{s1} to the substitution \highlighttexttt{s2}, then return the combination of the two substitutions.
+
+              The functionality of \highlighttexttt{compose\_substs\_choreo} is the same as the local version.
     \end{itemize}
 
 \subsection{Type Inference for Local Language}
     The type system for the local language can be found in the \hyperref[appendix:local_typ]{Appendix B}.
-    \fxnote{Add the explaination of some of the cases for the local language}
+
+    \subsubsection{Type Inference for Local Expression}\label{local_expr}
+        We list some of the cases for the type inference of the local expression:
+        \begin{itemize}
+            \item \textbf{Local Variable} \texttt{Local.Var (Local.VarId var\_name)}\\
+                  The type of the variable \texttt{var\_name} is the type binding of the variable in the local context, we look up the type of the variable in the context
+                  using \href{https://ocaml.org/manual/5.2/api/List.html#VALassoc_opt}{\highlighttexttt[orange]{List.assoc\_opt}}. We either
+                  return the type of the variable with empty substitution if it is found in the context, or we raise an variable not found exception.
+            \item \textbf{Binary Operation} \texttt{Local.BinOp (e1, op, e2)}\\
+                  The type of the binary operation expression depends on the type of the operator and the operands.
+                  At the beginning, we infer the type of the left-hand side expression \texttt{e1} by calling the \highlighttexttt{infer\_local\_expr}.
+                  We then apply the substitution returned by infer \texttt{e1} to the local context, and call \highlighttexttt{infer\_local\_expr}
+                  to infer the type of the right-hand side expression \texttt{e2} by using the updated context and the substitution.
+                  Suppose the operator is \texttt{||}, we then unify the type of both \texttt{e1} and \texttt{e2} with expected type \texttt{TBool}.
+                  At the end, we return the type \texttt{TBool} with the combination of all substitutions.
+            \item \textbf{Let \ldots in} \texttt{Local.Let (var\_name, local\_typ, e1, e2)}\\
+                  The type of the let binding expression is the type of the expression \texttt{e2}. We haved talked about the type inference of the
+                  let binding expression in the \hyperref[understand_type_system]{Understanding the Type System} section. In here,
+                  we infer the type of the expression \texttt{e1} first, and we check if the type of the expression \texttt{e1}
+                  is the same as the type annotation \texttt{local\_type}, if they are not the same, we raise a type mismatch exception.
+                  Then we add the type binding \texttt{var\_name:local\_type} to the local context, and do the remaining type inference of the expression \texttt{e2}.
+            \item \textbf{Left \& Right} \texttt{Local.Left e} \& \texttt{Local.Right e}\\
+                  The type of the \texttt{left} expression is the sum type, with one of the types being the type of the expression \texttt{e}.
+                  Assume the expression is \texttt{Left e}, we infer the type of the expression \texttt{e} first.
+                  Since we don't know the right side of the sum type, we give it a fresh type variable \texttt{T\_n} by calling \highlighttexttt{gen\_ftv}.
+                  The return type of the expression is \texttt{TSum (typ\_of\_e, T\_n)}.
+            \item \textbf{Match} \texttt{Local.Match (e, cases)}\\
+                  It is recommended that you read the \hyperref[local_pattern]{local pattern} first before reading the pattern matching.
+
+                  The type of the \texttt{match} expression is the type of the sub-expressions in the cases. At first we
+                  split the cases into the list of patterns and list of sub-expressions. Then we infer each pattern in the list of patterns
+                  by using \href{https://ocaml.org/manual/5.2/api/List.html#VALmap}{\highlighttexttt[orange]{List.map}} with the \highlighttexttt{infer\_local\_pattern} function to collect the combination of substitutions,
+                  the type of patterns, and the list of each context of the pattern. We then apply the substitution to each of the type of the pattern
+                  to get the final type of the pattern list, The list of the final type of the pattern must be the sum type. From \highlighttexttt{infer\_local\_pattern},
+                  we give a fresh new type variable to left and right side of the sum type when we encounter the \texttt{Local.Left} and \texttt{Local.Right} pattern,
+                  here we unify the type of left and right side of the sum type to get the final type of the sum type,
+                  and we add the binding of sum type and the type of match expression to the context.
+
+                  When we infer the type of the sub-expressions in the cases,
+                  for each sub-expression, we first combine the context from each pattern with the local context, and then use substitution to rewrite it,
+                  and then use it to infer the type of the corresponding sub-expression by \highlighttexttt{infer\_local\_expr},
+                  after this we collect the combination of substitutions and the list of type of the sub-expressions. We compose the substitution of the pattern
+                  with the substitution of the sub-expression by calling \highlighttexttt{compose\_subst\_local} to get the final substitution, and then apply the final substitution
+                  to the type of the sub-expression to rewrite the list of types. At the end, we unify the list of types of the sub-expressions with the
+                  head of the list because all the types of the sub-expressions must be the same, and we compose the final substitution with the head of the list of types.
+        \end{itemize}
+
+    \subsubsection{Type Inference for Local Pattern}\label{local_pattern}
+        Infer the type of pattern in local language is different from infer the type of expression.
+        The difference is that the pattern is used to match the value of the expression, and we need to
+        create the ad-hoc binding for any variable in the pattern with fresh type variables, as we will use them in the sub-expression.
+        So the return type of the pattern is the substitution, the type of the pattern, and a context that stores the type bindings of the variables in the pattern.
+
+        The way to infer the type of the pattern is most similar to the way to infer the type of the expression,
+        but whenever we encounter a variable in the pattern, we create a fresh type variable by calling \highlighttexttt{gen\_ftv},
+        and add the type binding of the variable to the context. So the return of the \texttt{Local.Var var\_name} pattern is
+        \texttt{([], T\_n, [(var\_name, T\_n)])}. The return of the \texttt{Local.Left p} pattern and \texttt{Local.Right p} pattern is similar to
+        how we infer the type of the \texttt{Local.Left} and \texttt{Local.Right} expression in the \hyperref[local_expr]{local expression} section.
 
 \subsection{Type inference for Choreographic Language}
     The type system for the choreographic language can be found in the \hyperref[appendix:choreo_typ]{Appendix C}.
