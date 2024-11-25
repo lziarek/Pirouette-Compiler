@@ -1,13 +1,17 @@
 FILE := $(word 2, $(MAKECMDGOALS))
 LATEX_DOCS := $(shell find docs -name '*.tex')
 
-.PHONY: build docs pp json dot test-infer test-pp bisect-pp clean cleandocs cleanall
+.PHONY: build docs check-env pp json dot test-infer test-pp bisect-pp clean cleandocs cleanall
 
 build:
 	dune build
 
-docs: $(LATEX_DOCS)
-	@for file in $^; do \
+check-env:
+	@command -v pdflatex >/dev/null 2>&1 || { echo "Error: pdflatex is not installed. Please install TeX Live or MacTeX."; exit 1; }
+	@command -v biber >/dev/null 2>&1 || { echo "Error: biber is not installed. Please install biber."; exit 1; }
+
+docs: check-env
+	@for file in $(LATEX_DOCS); do \
 		base=$$(basename $$file .tex); \
 		dir=$$(dirname $$file); \
 		if [ -f "$${dir}/$$base.bib" ]; then \

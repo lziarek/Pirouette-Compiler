@@ -304,7 +304,7 @@
                   to infer the type of the right-hand side expression \texttt{e2} by using the updated context and the substitution.
                   Suppose the operator is \texttt{||}, we then unify the type of both \texttt{e1} and \texttt{e2} with expected type \texttt{TBool}.
                   At the end, we return the type \texttt{TBool} with the combination of all substitutions.
-            \item \textbf{Let \ldots in} \texttt{Local.Let (var\_name, local\_typ, e1, e2)}\\
+            \item \textbf{Let \ldots in} \texttt{Local.Let (var\_name, local\_type, e1, e2)}\\
                   The type of the let binding expression is the type of the expression \texttt{e2}. We haved talked about the type inference of the
                   let binding expression in the \hyperref[understand_type_system]{Understanding the Type System} section. In here,
                   we infer the type of the expression \texttt{e1} first, and we check if the type of the expression \texttt{e1}
