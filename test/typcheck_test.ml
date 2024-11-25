@@ -219,8 +219,8 @@ let incorrect_local_type_suite =
           |> local_expr_typ_failures int_var)
        ; ("Incorrect pattern match - return type mismatch"
           >:: fun _ ->
-          Failure "Type of sub exprs mismatch"
-          |> local_expr_typ_failures mismatched_return_match)
+          Failure "Unification failed" |> local_expr_typ_failures mismatched_return_match
+         )
        ; ("Incorrect pattern match - pattern type mismatch"
           >:: fun _ ->
           Failure "Type of patterns are not sum types"
@@ -246,6 +246,158 @@ let () =
 let () =
   print_endline "\nIncorrect local type inference tests";
   run_test_tt_main incorrect_local_type_suite
+;;
+
+let choreo_expr_typ_eq e expected_t =
+  let subst, t = infer_choreo_expr [] [] e in
+  assert_equal t expected_t;
+  assert_equal subst []
+;;
+
+let choreo_expr_typ_failures e failure =
+  assert_raises failure (fun _ -> choreo_expr_typ_eq e (Choreo.TUnit m))
+;;
+
+let choreo_pattern_typ_eq p expected_ctx expected_t =
+  let subst, t, ctx = infer_choreo_pattern [] [] p in
+  assert_equal t expected_t;
+  assert_equal subst [];
+  assert_equal ctx expected_ctx
+;;
+
+let correct_choreo_unit_e = Choreo.Unit m
+
+let correct_choreo_loc_expr =
+  Choreo.LocExpr (Local.LocId ("Alice", m), Local.Val (Local.Int (1, m), m), m)
+;;
+
+let correct_choreo_send =
+  Choreo.Send
+    (Local.LocId ("Alice", m), correct_choreo_loc_expr, Local.LocId ("Bob", m), m)
+;;
+
+let correct_choreo_if =
+  Choreo.If
+    ( Choreo.LocExpr (Local.LocId ("Alice", m), Local.Val (Local.Bool (true, m), m), m)
+    , correct_choreo_loc_expr
+    , correct_choreo_send
+    , m )
+;;
+
+let correct_choreo_fundef =
+  Choreo.FunDef ([ Choreo.Var (Local.VarId ("foo", m), m) ], correct_choreo_loc_expr, m)
+;;
+
+let correct_choreo_funapp =
+  Choreo.FunApp (correct_choreo_fundef, correct_choreo_loc_expr, m)
+;;
+
+let correct_choreo_pair = Choreo.Pair (correct_choreo_loc_expr, correct_choreo_send, m)
+let correct_fst = Choreo.Fst (correct_choreo_pair, m)
+let correct_snd = Choreo.Snd (correct_choreo_pair, m)
+let correct_left = Choreo.Left (correct_choreo_loc_expr, m)
+let correct_right = Choreo.Right (correct_choreo_loc_expr, m)
+
+(*Detect choreo type errors*)
+let incorrect_choreo_if_condition =
+  Choreo.If
+    ( Choreo.LocExpr (Local.LocId ("Alice", m), Local.Val (Local.Int (1, m), m), m)
+      (*condition is int instead of bool*)
+    , correct_choreo_loc_expr
+    , correct_choreo_send
+    , m )
+;;
+
+let incorrect_choreo_send =
+  Choreo.Send
+    ( Local.LocId ("Bob", m)
+    , (*different/wrong source*)
+      correct_choreo_loc_expr
+    , Local.LocId ("Charlie", m)
+    , m )
+;;
+
+(*the first expr should be a function*)
+let incorrect_choreo_funapp =
+  Choreo.FunApp (correct_choreo_loc_expr, correct_choreo_loc_expr, m)
+;;
+
+let choreo_const_suite =
+  "Choreo const type inference tests"
+  >::: [ ("Correct infer choreo unit"
+          >:: fun _ -> Choreo.TUnit m |> choreo_expr_typ_eq correct_choreo_unit_e)
+       ; ("Correct infer location expression"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_loc_expr)
+       ; ("Correct infer send"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_send)
+       ; ("Correct infer if"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_if)
+       ; ("Correct infer function definition"
+          >:: fun _ ->
+          Choreo.TMap
+            ( Choreo.TVar (Choreo.Typ_Id ("T0", m), m)
+            , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , m )
+          |> choreo_expr_typ_eq correct_choreo_fundef)
+       ; ("Correct infer function application"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_choreo_funapp)
+       ; ("Correct infer pair"
+          >:: fun _ ->
+          Choreo.TProd
+            ( Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+            , m )
+          |> choreo_expr_typ_eq correct_choreo_pair)
+       ; ("Correct infer fst"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_fst)
+       ; ("Correct infer snd"
+          >:: fun _ ->
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          |> choreo_expr_typ_eq correct_snd)
+       ; ("Correct infer left"
+          >:: fun _ ->
+          Choreo.TSum
+            ( Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , Choreo.TLoc
+                (Local.LocId ("dummy_loc", m), Local.TVar (Local.TypId ("T0", m), m), m)
+            , m )
+          |> choreo_expr_typ_eq correct_left)
+       ; ("Correct infer right"
+          >:: fun _ ->
+          Choreo.TSum
+            ( Choreo.TLoc
+                (Local.LocId ("dummy_loc", m), Local.TVar (Local.TypId ("T0", m), m), m)
+            , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
+            , m )
+          |> choreo_expr_typ_eq correct_right)
+       ]
+;;
+
+let incorrect_choreo_type_suite =
+  "Detect choreo type errors"
+  >::: [ ("Type error in if condition"
+          >:: fun _ ->
+          Failure "Expected boolean type"
+          |> choreo_expr_typ_failures incorrect_choreo_if_condition)
+       ; ("Location mismatch in send"
+          >:: fun _ ->
+          Failure "Source location mismatch"
+          |> choreo_expr_typ_failures incorrect_choreo_send)
+       ; ("Type error in function application"
+          >:: fun _ ->
+          Failure "Expected function type"
+          |> choreo_expr_typ_failures incorrect_choreo_funapp)
+       ]
 ;;
 
 (*Outdated test code for boolean type checker*)
