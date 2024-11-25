@@ -299,7 +299,7 @@
                   return the type of the variable with empty substitution if it is found in the context, or we raise an variable not found exception.
             \item \textbf{Binary Operation} \texttt{Local.BinOp (e1, op, e2)}\\
                   The type of the binary operation expression depends on the type of the operator and the operands.
-                  At the beginning, we infer the type of the left-hand side expression \texttt{e1} by calling the \highlighttexttt{infer\_local\_expr}.
+                  At the beginning, we infer the type of the left-hand side expression \texttt{e1} by \highlighttexttt{infer\_local\_expr}.
                   We then apply the substitution returned by infer \texttt{e1} to the local context, and call \highlighttexttt{infer\_local\_expr}
                   to infer the type of the right-hand side expression \texttt{e2} by using the updated context and the substitution.
                   Suppose the operator is \texttt{||}, we then unify the type of both \texttt{e1} and \texttt{e2} with expected type \texttt{TBool}.
@@ -313,7 +313,7 @@
             \item \textbf{Left \& Right} \texttt{Local.Left e} \& \texttt{Local.Right e}\\
                   The type of the \texttt{left} expression is the sum type, with one of the types being the type of the expression \texttt{e}.
                   Assume the expression is \texttt{Left e}, we infer the type of the expression \texttt{e} first.
-                  Since we don't know the right side of the sum type, we give it a fresh type variable \texttt{T\_n} by calling \highlighttexttt{gen\_ftv}.
+                  Since we don't know the right side of the sum type, we give it a fresh type variable \texttt{T\_n} by \highlighttexttt{gen\_ftv}.
                   The return type of the expression is \texttt{TSum (typ\_of\_e, T\_n)}.
             \item \textbf{Match} \texttt{Local.Match (e, cases)}\\
                   It is recommended that you read the \hyperref[local_pattern]{local pattern} first before reading the pattern matching.
@@ -331,7 +331,7 @@
                   for each sub-expression, we first combine the context from each pattern with the local context, and then use substitution to rewrite it,
                   and then use it to infer the type of the corresponding sub-expression by \highlighttexttt{infer\_local\_expr},
                   after this we collect the combination of substitutions and the list of type of the sub-expressions. We compose the substitution of the pattern
-                  with the substitution of the sub-expression by calling \highlighttexttt{compose\_subst\_local} to get the final substitution, and then apply the final substitution
+                  with the substitution of the sub-expression by \highlighttexttt{compose\_subst\_local} to get the final substitution, and then apply the final substitution
                   to the type of the sub-expression to rewrite the list of types. At the end, we unify the list of types of the sub-expressions with the
                   head of the list because all the types of the sub-expressions must be the same, and we compose the final substitution with the head of the list of types.
         \end{itemize}
@@ -343,16 +343,71 @@
         So the return type of the pattern is the substitution, the type of the pattern, and a context that stores the type bindings of the variables in the pattern.
 
         The way to infer the type of the pattern is most similar to the way to infer the type of the expression,
-        but whenever we encounter a variable in the pattern, we create a fresh type variable by calling \highlighttexttt{gen\_ftv},
+        but whenever we encounter a variable in the pattern, we create a fresh type variable by \highlighttexttt{gen\_ftv},
         and add the type binding of the variable to the context. So the return of the \texttt{Local.Var var\_name} pattern is
         \texttt{([], T\_n, [(var\_name, T\_n)])}. The return of the \texttt{Local.Left p} pattern and \texttt{Local.Right p} pattern is similar to
         how we infer the type of the \texttt{Local.Left} and \texttt{Local.Right} expression in the \hyperref[local_expr]{local expression} section.
 
 \subsection{Type inference for Choreographic Language}
     The type system for the choreographic language can be found in the \hyperref[appendix:choreo_typ]{Appendix C}.
-    \fxnote{Add the explaination of some of the cases for the choreographic language}
 
-    \newpage % end of section
+    \subsubsection{Type Inference for Choreo Expression}\label{choreo_expr}
+        We list only some of the cases for the type inference of the choreographic expression that are
+        significantly different from the local expression:
+        \begin{itemize}
+            \item \textbf{LocExpr} \texttt{Choreo.LocExpr (Local.LocId loc\_id, local\_expr)}\\
+                  The type of the \texttt{LocExpr} is the type of \texttt{local\_expr} with \texttt{loc\_id}.
+                  To infer the type of the location expression, we first extract the local context of the location \texttt{loc\_id} from \texttt{global\_ctx}
+                  by \highlighttexttt{extract\_local\_ctx}, and then we infer the type of the local expression by \highlighttexttt{infer\_local\_expr}.
+                  After we apply the substitution to the local type, we add \texttt{loc\_id} to each of the type variables in the substitution by
+                  \highlighttexttt{get\_choreo\_subst} to construct the choreographic substitution.
+            \item \textbf{Send} \texttt{Choreo.Send (src, e, dst)}\\
+                  The type of the \texttt{Send} expression is the type of the expression \texttt{e} with destination location.
+                  We infer the type of the expression \texttt{e} first, then we extract the type to check if the location of the expression \texttt{e}
+                  is the same as the source location \texttt{src}, if not we raise a source location mismatch exception.
+                  We then unify the type of the expression \texttt{e} with the expected type of the source location \texttt{src} by \highlighttexttt{unify\_choreo}.
+                  At the end, we return the type of the expression \texttt{e} with the destination location \texttt{dst}, and the combination of all substitutions.
+            \item \textbf{Function Definition} \texttt{Choreo.FunDef (args, e)}\\
+                  The type of the function definition is the type of input arguments with return type of the function body \texttt{e}.
+                  We first use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}}
+                  to infer the type of the input arguments by \highlighttexttt{infer\_choreo\_pattern} and collect the combination of substitutions,
+                  list of arguments types, and the combination of contexts. We then infer the type of the expression \texttt{e} by using the updated context.
+                  We use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}} to
+                  combine the type of input arguments with the return type of the function body and return it as the type of the function definition.
+                  The reason we use \href{https://ocaml.org/manual/5.2/api/List.html#VALfold_right}{\highlighttexttt[orange]{List.fold\_right}} is that the
+                  function type in functional programming is right-associative, so we need to combine the type of the input arguments with the return type of the function body from right to left.
+                  For example, the function type of \texttt{int -> bool -> string -> int} is \texttt{int -> (bool -> (string -> int))}.
+                  And we use the \texttt{Choreo.TMaps} type to represent the function type, so \texttt{int -> (bool -> (string -> int))}
+                  would be represented as \texttt{TMaps (int, TMaps (bool, TMaps (string, int)))}.
+            \item \textbf{Function Application} \texttt{Choreo.FunApp (func, param)}\\
+                  The type of the function application is the return type of the function.
+                  We first infer the type of the function and parameter by \highlighttexttt{infer\_choreo\_expr}.
+                  After we rewrite the type of the function by applying the combined substitution to the function type,
+                  we need to check if the type of the function is a \texttt{TMaps} type, if not we raise an expected function type exception.
+                  We then unify the type of the parameter with the input type of the function by \highlighttexttt{unify\_choreo},
+                  and return the return type of the function as the type of the function application with the combination of all substitutions.
+        \end{itemize}
+
+    \subsubsection{Type Inference for Choreo Pattern}\label{choreo_pattern}
+        Infer the type of pattern in choreographic language is similar to infer the type of pattern in local language,
+        the only thing new in the choreographic pattern is the \texttt{Choreo.LocPat} pattern,
+        and the idea is the same as the \texttt{Choreo.LocExpr} expression in \hyperref[choreo_expr]{choreo expression} section.
+
+    \subsubsection{Type Inference for Choreo Statement}\label{choreo_stmt}
+        We have three different types of statements in the choreographic language:
+        \begin{itemize}
+            \item \textbf{Decl} \texttt{Choreo.Decl (pattn, choreo\_typ)}\\
+                  \texttt{Decl} is used to declare the type of the variable in the choreographic context.
+                  We first check if the pattern is a variable name, if not we raise a pattern mismatch exception.
+                  We then add the binding \texttt{var\_name:choreo\_typ} to the choreographic context and return.
+            \item \textbf{Assign} \texttt{Choreo.Assign (pattn\_ls, expr)}\\
+                  \texttt{Assign} is used to define a main function in the choreographic language. The main function is the function that is executed when the program starts. 
+                  The idea of inferring the type of the \texttt{Assign} statement is similar to the \texttt{FunDef} expression in the \hyperref[choreo_expr]{choreo expression} section. 
+            \item \textbf{TypeDecl} \texttt{Choreo.TypeDecl (typ\_id, choreo\_typ)}\\
+                  Not implemented yet.
+        \end{itemize}
+
+        \newpage % end of section
 
 \section{Appendices}
     \begin{appendices}
