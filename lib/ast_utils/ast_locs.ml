@@ -11,6 +11,7 @@ let rec extract_pattern : 'a Choreo.pattern -> LocSet.t = function
 let rec extract_type : 'a Choreo.typ -> LocSet.t = function
   | TUnit _ -> LocSet.empty
   | TLoc (LocId (id, _), _, _) -> LocSet.singleton id
+  | TVar (Typ_Id (id, _), _) -> LocSet.singleton id
   | TMap (t1, t2, _) | TProd (t1, t2, _) | TSum (t1, t2, _) ->
     LocSet.union (extract_type t1) (extract_type t2)
 ;;

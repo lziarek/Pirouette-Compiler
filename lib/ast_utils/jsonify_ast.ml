@@ -112,6 +112,7 @@ let rec jsonify_choreo_type = function
   | Choreo.TUnit _ -> `String "TUnit"
   | Choreo.TLoc (LocId (loc, _), t, _) ->
     `Assoc [ "TLoc", `Assoc [ "loc", `String loc; "local_type", jsonify_local_type t ] ]
+  | Choreo.TVar (Typ_Id (id, _), _) -> `String id
   | Choreo.TMap (t1, t2, _) ->
     `Assoc [ "TMap", `List [ jsonify_choreo_type t1; jsonify_choreo_type t2 ] ]
   | Choreo.TProd (t1, t2, _) ->
