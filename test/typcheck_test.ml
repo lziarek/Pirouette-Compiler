@@ -245,6 +245,29 @@ let choreo_pattern_typ_eq p expected_ctx expected_t =
   assert_equal ctx expected_ctx
 ;;
 
+(* let rec typ_structure_eq t1 t2 =
+   match t1, t2 with
+   | Choreo.TVar (Choreo.Typ_Id (id1, _), _), Choreo.TVar (Choreo.Typ_Id (id2, _), _) ->
+   id1 = id2
+   | Choreo.TLoc (Local.LocId (l1, _), t1, _), Choreo.TLoc (Local.LocId (l2, _), t2, _) ->
+   l1 = l2 && t1 = t2
+   | Choreo.TMap (t1_in, t1_out, _), Choreo.TMap (t2_in, t2_out, _) ->
+   typ_structure_eq t1_in t2_in && typ_structure_eq t1_out t2_out
+   | Choreo.TProd (t1_1, t1_2, _), Choreo.TProd (t2_1, t2_2, _) ->
+   typ_structure_eq t1_1 t2_1 && typ_structure_eq t1_2 t2_2
+   | Choreo.TSum (t1_1, t1_2, _), Choreo.TSum (t2_1, t2_2, _) ->
+   typ_structure_eq t1_1 t2_1 && typ_structure_eq t1_2 t2_2
+   | Choreo.TUnit _, Choreo.TUnit _ -> true
+   | _ -> false
+   ;;
+
+   let choreo_pattern_typ_eq p expected_ctx expected_t =
+   let subst, t, ctx = infer_choreo_pattern [] [] p in
+   assert_equal subst [];
+   assert_bool "Type structures don't match" (typ_structure_eq t expected_t);
+   assert_equal ctx expected_ctx
+   ;; *)
+
 (*--------------------Choreo const type inference testcases--------------------*)
 let correct_choreo_unit_e = Choreo.Unit m
 
@@ -461,7 +484,7 @@ let choreo_const_suite =
           |> choreo_expr_typ_eq correct_choreo_send)
        ; ("Correct infer if"
           >:: fun _ ->
-          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
           |> choreo_expr_typ_eq correct_choreo_if)
        ; ("Correct infer function definition"
           >:: fun _ ->
@@ -493,15 +516,13 @@ let choreo_const_suite =
           >:: fun _ ->
           Choreo.TSum
             ( Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
-            , Choreo.TLoc
-                (Local.LocId ("dummy_loc", m), Local.TVar (Local.TypId ("T0", m), m), m)
+            , Choreo.TVar (Choreo.Typ_Id ("T0", m), m)
             , m )
           |> choreo_expr_typ_eq correct_left)
        ; ("Correct infer right"
           >:: fun _ ->
           Choreo.TSum
-            ( Choreo.TLoc
-                (Local.LocId ("dummy_loc", m), Local.TVar (Local.TypId ("T0", m), m), m)
+            ( Choreo.TVar (Choreo.Typ_Id ("T0", m), m)
             , Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
             , m )
           |> choreo_expr_typ_eq correct_right)
@@ -512,11 +533,11 @@ let choreo_binding_suite =
   "Choreo binding type inference tests"
   >::: [ ("Correct infer let with int"
           >:: fun _ ->
-          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
           |> choreo_expr_typ_eq correct_choreo_let_int_e)
        ; ("Correct infer let with bool"
           >:: fun _ ->
-          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TBool m, m)
           |> choreo_expr_typ_eq correct_choreo_let_bool_e)
        ; ("Correct infer let with string"
           >:: fun _ ->
@@ -527,7 +548,7 @@ let choreo_binding_suite =
           |> choreo_expr_typ_eq correct_choreo_let_str_e)
        ; ("Correct infer nested let"
           >:: fun _ ->
-          Choreo.TLoc (Local.LocId ("Bob", m), Local.TInt m, m)
+          Choreo.TLoc (Local.LocId ("Bob", m), Local.TBool m, m)
           |> choreo_expr_typ_eq correct_choreo_nested_binding)
        ]
 ;;
@@ -559,8 +580,7 @@ let correct_choreo_pattern_suite =
           >:: fun _ ->
           Choreo.TSum
             ( Choreo.TLoc (Local.LocId ("Alice", m), Local.TInt m, m)
-            , Choreo.TLoc
-                (Local.LocId ("dummy_loc", m), Local.TVar (Local.TypId ("T0", m), m), m)
+            , Choreo.TVar (Choreo.Typ_Id ("T0", m), m)
             , m )
           |> choreo_pattern_typ_eq choreo_left_loc_p [])
        ; ("Correct pattern match"
@@ -593,7 +613,7 @@ let incorrect_choreo_type_suite =
           |> choreo_expr_typ_failures incorrect_choreo_let_binding)
        ; ("Location mismatch in variable use"
           >:: fun _ ->
-          Failure "Location mismatch"
+          Failure "Source location mismatch"
           |> choreo_expr_typ_failures incorrect_choreo_location)
        ; ("Type error in pattern match - return type mismatch"
           >:: fun _ ->
@@ -606,45 +626,64 @@ let incorrect_choreo_type_suite =
        ]
 ;;
 
-let () =
-  print_endline "\nLocal const type inference tests";
-  run_test_tt_main const_suite
+let all_suites =
+  "All type inference tests"
+  >::: [ (*Local test suites*)
+         const_suite
+       ; local_binding_suite
+       ; correct_pattn_suite
+       ; incorrect_local_type_suite
+       ; (*Choreo test suites*)
+         choreo_const_suite
+       ; choreo_binding_suite
+       ; correct_choreo_pattern_suite
+       ; incorrect_choreo_type_suite
+       ]
 ;;
 
 let () =
-  print_endline "\nlocal binding tests";
-  run_test_tt_main local_binding_suite
+  print_endline "\nRunning all type inference tests";
+  run_test_tt_main all_suites
 ;;
+(* let () =
+   print_endline "\nLocal const type inference tests";
+   run_test_tt_main const_suite
+   ;;
 
-let () =
-  print_endline "\nCorrect local pattern type inference tests";
-  run_test_tt_main correct_pattn_suite
-;;
+   let () =
+   print_endline "\nlocal binding tests";
+   run_test_tt_main local_binding_suite
+   ;;
 
-let () =
-  print_endline "\nIncorrect local type inference tests";
-  run_test_tt_main incorrect_local_type_suite
-;;
+   let () =
+   print_endline "\nCorrect local pattern type inference tests";
+   run_test_tt_main correct_pattn_suite
+   ;;
 
-let () =
-  print_endline "\nChoreo const type inference tests";
-  run_test_tt_main choreo_const_suite
-;;
+   let () =
+   print_endline "\nIncorrect local type inference tests";
+   run_test_tt_main incorrect_local_type_suite
+   ;;
 
-let () =
-  print_endline "\nChoreo binding tests";
-  run_test_tt_main choreo_binding_suite
-;;
+   let () =
+   print_endline "\nChoreo const type inference tests";
+   run_test_tt_main choreo_const_suite
+   ;;
 
-let () =
-  print_endline "\nChoreo pattern type inference tests";
-  run_test_tt_main correct_choreo_pattern_suite
-;;
+   let () =
+   print_endline "\nChoreo binding tests";
+   run_test_tt_main choreo_binding_suite
+   ;;
 
-let () =
-  print_endline "\nIncorrect choreo type inference tests";
-  run_test_tt_main incorrect_choreo_type_suite
-;;
+   let () =
+   print_endline "\nChoreo pattern type inference tests";
+   run_test_tt_main correct_choreo_pattern_suite
+   ;;
+
+   let () =
+   print_endline "\nIncorrect choreo type inference tests";
+   run_test_tt_main incorrect_choreo_type_suite
+   ;; *)
 
 (*Outdated test code for boolean type checker*)
 

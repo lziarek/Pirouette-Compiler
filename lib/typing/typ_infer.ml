@@ -389,7 +389,8 @@ and infer_choreo_expr choreo_ctx (global_ctx : global_ctx) = function
   | Choreo.Sync (_, _, _, e, _) -> infer_choreo_expr choreo_ctx global_ctx e
   | Choreo.If (cond, e1, e2, _) ->
     let s_cond, t_cond = infer_choreo_expr choreo_ctx global_ctx cond in
-    (match t_cond with
+    let t_cond' = apply_subst_typ_choreo s_cond t_cond in
+    (match t_cond' with
      | Choreo.TLoc (_, Local.TBool _, _) ->
        let e1_s, t1 =
          infer_choreo_expr (apply_subst_ctx_choreo s_cond choreo_ctx) global_ctx e1
