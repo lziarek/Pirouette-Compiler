@@ -99,6 +99,12 @@
     the type of the argument \texttt{38} to be \texttt{int}, and we unify the type of the argument with the type of the parameter in the function type,
     and the return type of the function application is the return type of the function, which is \texttt{int}.
 
+    Since Pirouette separates the local language and the choreographic language, we need to find a way to connect the type inference of different languages layers.
+    The way to do this is to use a global context that stores the type bindings of all the variables on different locations in the program. Suppose we have an expression 
+    \texttt{Alice.\(x > 5\)}, we first extract the local context of the location \texttt{Alice} from the global context by traversing the global context, and pick all the type bindings of the location \texttt{Alice}.
+    Then we infer the type of the expression \texttt{\(x > 5\)} by using the local context of the location \texttt{Alice}, if \texttt{x} has been bound to \texttt{int} in the local context of the location \texttt{Alice},
+    then the type of \texttt{\(x > 5\)} is \texttt{bool}. When we return the whole expression, we need to add the location \texttt{Alice} to our local type to get the choreographic type. So the type of the whole expression is \texttt{Alice.bool}.
+
     There are some other resources that may help in understanding the unification algorithm and the type inference process.
     The note from Cornell\cite{Cornell} provides an explanation of the type inference process,
     the terms used in Cornell note are not the same as the terms used in this note, but it gives the general idea of how unification and substitution work.
