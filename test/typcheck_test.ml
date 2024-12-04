@@ -12,6 +12,7 @@ open OUnit2
 open Typing.Typ_infer
 
 let m : ftv = Ok "dummy info"
+let assert_true = assert_equal true
 
 (*--------------------Local type inference testcases--------------------*)
 
@@ -120,11 +121,14 @@ let rec local_typ_eq t expected_t =
 ;;
 
 let local_ctx_eq ctx expected_ctx =
-  List.for_all2
-    (fun (var_name, typ) (expected_var_name, expected_typ) ->
-       var_name = expected_var_name && local_typ_eq typ expected_typ)
-    ctx
-    expected_ctx
+  try
+    List.for_all2
+      (fun (var_name, typ) (expected_var_name, expected_typ) ->
+         var_name = expected_var_name && local_typ_eq typ expected_typ)
+      ctx
+      expected_ctx
+  with
+  | Invalid_argument _ -> false
 ;;
 
 (*Substitution and context are the same type*)
@@ -132,7 +136,7 @@ let local_subst_eq = local_ctx_eq
 
 let local_expr_typ_eq e expected_t =
   let subst, t = infer_local_expr [] e in
-  (local_typ_eq t expected_t && local_subst_eq subst []) |> assert_equal true
+  (local_typ_eq t expected_t && local_subst_eq subst []) |> assert_true
 ;;
 
 let local_expr_typ_failures e failure =
@@ -142,7 +146,7 @@ let local_expr_typ_failures e failure =
 let local_pattn_typ_eq p expected_ctx expected_t =
   let subst, t, ctx = infer_local_pattern [] p in
   (local_typ_eq t expected_t && local_ctx_eq ctx expected_ctx && local_subst_eq subst [])
-  |> assert_equal true
+  |> assert_true
 ;;
 
 let const_suite =
@@ -267,18 +271,21 @@ let rec chreo_typ_eq t expected_t =
 ;;
 
 let choreo_ctx_eq ctx expected_ctx =
-  List.for_all2
-    (fun (var_name, typ) (expected_var_name, expected_typ) ->
-       var_name = expected_var_name && chreo_typ_eq typ expected_typ)
-    ctx
-    expected_ctx
+  try
+    List.for_all2
+      (fun (var_name, typ) (expected_var_name, expected_typ) ->
+         var_name = expected_var_name && chreo_typ_eq typ expected_typ)
+      ctx
+      expected_ctx
+  with
+  | Invalid_argument _ -> false
 ;;
 
 let choreo_subst_eq = choreo_ctx_eq
 
 let choreo_expr_typ_eq e expected_t =
   let subst, t = infer_choreo_expr [] [] e in
-  (chreo_typ_eq t expected_t && choreo_subst_eq subst []) |> assert_equal true
+  (chreo_typ_eq t expected_t && choreo_subst_eq subst []) |> assert_true
 ;;
 
 let choreo_expr_typ_failures e failure =
@@ -288,7 +295,7 @@ let choreo_expr_typ_failures e failure =
 let choreo_pattern_typ_eq p expected_ctx expected_t =
   let subst, t, ctx = infer_choreo_pattern [] [] p in
   (chreo_typ_eq t expected_t && choreo_ctx_eq ctx expected_ctx && choreo_subst_eq subst [])
-  |> assert_equal true
+  |> assert_true
 ;;
 
 (*--------------------Choreo const type inference testcases--------------------*)
@@ -668,84 +675,3 @@ let () =
   print_endline "\nRunning all type inference tests";
   run_test_tt_main all_suites
 ;;
-(* let () =
-   print_endline "\nLocal const type inference tests";
-   run_test_tt_main const_suite
-   ;;
-
-   let () =
-   print_endline "\nlocal binding tests";
-   run_test_tt_main local_binding_suite
-   ;;
-
-   let () =
-   print_endline "\nCorrect local pattern type inference tests";
-   run_test_tt_main correct_pattn_suite
-   ;;
-
-   let () =
-   print_endline "\nIncorrect local type inference tests";
-   run_test_tt_main incorrect_local_type_suite
-   ;;
-
-   let () =
-   print_endline "\nChoreo const type inference tests";
-   run_test_tt_main choreo_const_suite
-   ;;
-
-   let () =
-   print_endline "\nChoreo binding tests";
-   run_test_tt_main choreo_binding_suite
-   ;;
-
-   let () =
-   print_endline "\nChoreo pattern type inference tests";
-   run_test_tt_main correct_choreo_pattern_suite
-   ;;
-
-   let () =
-   print_endline "\nIncorrect choreo type inference tests";
-   run_test_tt_main incorrect_choreo_type_suite
-   ;; *)
-
-(*Outdated test code for boolean type checker*)
-
-(* let m : Ast.Metainfo.metainfo = "", 0, 0, 0
-
-   let typ_eq (s : string) (expected_typ : Ast.Choreo.typ) =
-   let program = Parsing.parse_program (Lexing.from_string s) in
-   let result = Type_check.choreo_typ_check program expected_typ in
-   assert_equal result true
-   ;;
-
-   let suite =
-   "Type Checking Tests"
-   >::: [ "Examples"
-         >::: [ ("testcase1"
-                 >:: fun _ ->
-                 typ_eq
-                   Testcases.testcase_1
-                   (Ast.Choreo.TLoc (Ast.Local.LocId ("S", m), Ast.Local.TString m, m)))
-              ; ("testcase2"
-                 >:: fun _ ->
-                 typ_eq
-                   Testcases.testcase_2
-                   (Ast.Choreo.TLoc (Ast.Local.LocId ("R", m), Ast.Local.TString m, m)))
-              ; ("testcase3"
-                 >:: fun _ ->
-                 typ_eq
-                   Testcases.testcase_3
-                   (Ast.Choreo.TLoc (Ast.Local.LocId ("P2", m), Ast.Local.TInt m, m)))
-              ; ("testcase4"
-                 >:: fun _ ->
-                 typ_eq
-                   Testcases.testcase_4
-                   (Ast.Choreo.TProd
-                      ( Ast.Choreo.TLoc (Ast.Local.LocId ("P2", m), Ast.Local.TInt m, m)
-                      , Ast.Choreo.TLoc (Ast.Local.LocId ("P2", m), Ast.Local.TInt m, m)
-                      , m )))
-              ]
-       ]
-   ;;
-
-   let () = run_test_ttmain suite *)
