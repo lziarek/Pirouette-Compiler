@@ -13,6 +13,8 @@ open Typing.Typ_infer
 
 let m : ftv = Ok "dummy info"
 
+(*--------------------Local type inference testcases--------------------*)
+
 (*Const type inference testcases*)
 let correct_unit_e = Local.Unit m
 let correct_binop_bool_e = Local.BinOp (Val (Int (1, m), m), Eq m, Val (Int (1, m), m), m)
@@ -104,10 +106,33 @@ let mismatched_pattn_match =
     , m )
 ;;
 
+let rec local_typ_eq t expected_t =
+  match t, expected_t with
+  | Local.TUnit _, Local.TUnit _
+  | Local.TVar _, Local.TVar _
+  | Local.TInt _, Local.TInt _
+  | Local.TBool _, Local.TBool _
+  | Local.TString _, Local.TString _ -> true
+  | Local.TProd (t1, t2, _), Local.TProd (t1', t2', _)
+  | Local.TSum (t1, t2, _), Local.TSum (t1', t2', _) ->
+    local_typ_eq t1 t1' && local_typ_eq t2 t2'
+  | _ -> false
+;;
+
+let local_ctx_eq ctx expected_ctx =
+  List.for_all2
+    (fun (var_name, typ) (expected_var_name, expected_typ) ->
+       var_name = expected_var_name && local_typ_eq typ expected_typ)
+    ctx
+    expected_ctx
+;;
+
+(*Substitution and context are the same type*)
+let local_subst_eq = local_ctx_eq
+
 let local_expr_typ_eq e expected_t =
   let subst, t = infer_local_expr [] e in
-  assert_equal t expected_t;
-  assert_equal subst []
+  (local_typ_eq t expected_t && local_subst_eq subst []) |> assert_equal true
 ;;
 
 let local_expr_typ_failures e failure =
@@ -116,9 +141,8 @@ let local_expr_typ_failures e failure =
 
 let local_pattn_typ_eq p expected_ctx expected_t =
   let subst, t, ctx = infer_local_pattern [] p in
-  assert_equal t expected_t;
-  assert_equal subst [];
-  assert_equal ctx expected_ctx
+  (local_typ_eq t expected_t && local_ctx_eq ctx expected_ctx && local_subst_eq subst [])
+  |> assert_equal true
 ;;
 
 let const_suite =
@@ -228,10 +252,33 @@ let incorrect_local_type_suite =
        ]
 ;;
 
+(*--------------------Choreo type inference testcases--------------------*)
+
+let rec chreo_typ_eq t expected_t =
+  match t, expected_t with
+  | Choreo.TUnit _, Choreo.TUnit _ | Choreo.TVar _, Choreo.TVar _ -> true
+  | Choreo.TLoc (Local.LocId (l1, _), t1, _), Choreo.TLoc (Local.LocId (l2, _), t2, _) ->
+    l1 = l2 && local_typ_eq t1 t2
+  | Choreo.TMap (t1, t2, _), Choreo.TMap (t1', t2', _)
+  | Choreo.TProd (t1, t2, _), Choreo.TProd (t1', t2', _)
+  | Choreo.TSum (t1, t2, _), Choreo.TSum (t1', t2', _) ->
+    chreo_typ_eq t1 t1' && chreo_typ_eq t2 t2'
+  | _ -> false
+;;
+
+let choreo_ctx_eq ctx expected_ctx =
+  List.for_all2
+    (fun (var_name, typ) (expected_var_name, expected_typ) ->
+       var_name = expected_var_name && chreo_typ_eq typ expected_typ)
+    ctx
+    expected_ctx
+;;
+
+let choreo_subst_eq = choreo_ctx_eq
+
 let choreo_expr_typ_eq e expected_t =
   let subst, t = infer_choreo_expr [] [] e in
-  assert_equal t expected_t;
-  assert_equal subst []
+  (chreo_typ_eq t expected_t && choreo_subst_eq subst []) |> assert_equal true
 ;;
 
 let choreo_expr_typ_failures e failure =
@@ -240,33 +287,9 @@ let choreo_expr_typ_failures e failure =
 
 let choreo_pattern_typ_eq p expected_ctx expected_t =
   let subst, t, ctx = infer_choreo_pattern [] [] p in
-  assert_equal t expected_t;
-  assert_equal subst [];
-  assert_equal ctx expected_ctx
+  (chreo_typ_eq t expected_t && choreo_ctx_eq ctx expected_ctx && choreo_subst_eq subst [])
+  |> assert_equal true
 ;;
-
-(* let rec typ_structure_eq t1 t2 =
-   match t1, t2 with
-   | Choreo.TVar (Choreo.Typ_Id (id1, _), _), Choreo.TVar (Choreo.Typ_Id (id2, _), _) ->
-   id1 = id2
-   | Choreo.TLoc (Local.LocId (l1, _), t1, _), Choreo.TLoc (Local.LocId (l2, _), t2, _) ->
-   l1 = l2 && t1 = t2
-   | Choreo.TMap (t1_in, t1_out, _), Choreo.TMap (t2_in, t2_out, _) ->
-   typ_structure_eq t1_in t2_in && typ_structure_eq t1_out t2_out
-   | Choreo.TProd (t1_1, t1_2, _), Choreo.TProd (t2_1, t2_2, _) ->
-   typ_structure_eq t1_1 t2_1 && typ_structure_eq t1_2 t2_2
-   | Choreo.TSum (t1_1, t1_2, _), Choreo.TSum (t2_1, t2_2, _) ->
-   typ_structure_eq t1_1 t2_1 && typ_structure_eq t1_2 t2_2
-   | Choreo.TUnit _, Choreo.TUnit _ -> true
-   | _ -> false
-   ;;
-
-   let choreo_pattern_typ_eq p expected_ctx expected_t =
-   let subst, t, ctx = infer_choreo_pattern [] [] p in
-   assert_equal subst [];
-   assert_bool "Type structures don't match" (typ_structure_eq t expected_t);
-   assert_equal ctx expected_ctx
-   ;; *)
 
 (*--------------------Choreo const type inference testcases--------------------*)
 let correct_choreo_unit_e = Choreo.Unit m
